@@ -54,7 +54,8 @@ export default function LeadDetailPage() {
   const perms = useMe()?.permissions ?? [];
   const seesCustomers = perms.includes("customers"); // converting creates a customer: Leads and Customers access both needed
 
-  if (lead.error)
+  // Only a lead that never loaded: a failed refresh keeps the page (its error is reported as a toast).
+  if (lead.error && !c)
     return (
       <div className="flex flex-col items-start gap-4 p-4 sm:p-6">
         <p className="text-[18px] text-nav">{lead.error.status === 404 ? "This lead does not exist or is not assigned to you." : lead.error.message}</p>
@@ -86,7 +87,8 @@ export default function LeadDetailPage() {
           <button suppressHydrationWarning type="button" onClick={() => setModal("assign")} className={`${btn} cursor-pointer`}>
             Assign <Icon name="assign" size={18} />
           </button>
-          <button suppressHydrationWarning type="button" onClick={() => setModal("edit")} className={`${btn} cursor-pointer`}>
+          {/* Not before the lead has loaded: the form would open by itself when it arrived. */}
+          <button suppressHydrationWarning type="button" onClick={() => setModal("edit")} disabled={!c} className={`${btn} cursor-pointer disabled:cursor-wait disabled:opacity-60`}>
             Edit <Icon name="edit" size={18} />
           </button>
           {c && seesCustomers && !c.customer && (

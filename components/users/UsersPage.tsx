@@ -6,7 +6,7 @@ import { useConfirm, useToast } from "@/components/feedback";
 import { PhoneInput } from "@/components/PhoneInput";
 import { SkeletonRows, SubtitleSkeleton } from "@/components/skeletons";
 import { Badge, EmptyState, IconButton, LoadFailed, Modal, ModalActions, Pagination, Popover, PrimaryButton, SearchBox, SelectField, TextInput, ToolButton } from "@/components/ui";
-import { api, cap, day, fieldErrors, paging, useApi, useDebounced, type List } from "@/lib/api";
+import { api, cap, day, fieldErrors, paging, pastEnd, useApi, useDebounced, type List } from "@/lib/api";
 import { phoneError } from "@/lib/phone";
 import { useMe } from "@/components/Shell";
 import { UField, USER_MODAL, WIDE_ACTIONS } from "./form";
@@ -61,8 +61,17 @@ export function UsersPage() {
   const confirm = useConfirm();
 
   const roles = useApi<RoleSummary[]>("/roles").data ?? [];
-  const users = useApi<List<User>>("/users", { q: useDebounced(query), roleId: filter.roleId, status: filter.status, page });
+  // A new search starts again at page 1 when it is sent: resetting on the first key fetched page 1 of the old search.
+  const q = useDebounced(query);
+  const [searched, setSearched] = useState(q);
+  if (searched !== q) {
+    setSearched(q);
+    setPage(1);
+  }
+  const users = useApi<List<User>>("/users", { q, roleId: filter.roleId, status: filter.status, page });
   const list = users.data;
+  const back = pastEnd(list, page); // the last user on the last page was removed
+  if (back) setPage(back);
   const filtered = !!(query.trim() || filter.roleId || filter.status);
 
   const open = (u?: User) => {
@@ -201,10 +210,7 @@ export function UsersPage() {
           <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
             <SearchBox
               value={query}
-              onChange={(v) => {
-                setQuery(v);
-                setPage(1);
-              }}
+              onChange={setQuery}
             />
             <ToolButton label="Filter" icon="filter" btnRef={filterRef} onClick={() => setFilterOpen(true)} />
           </div>
@@ -221,7 +227,7 @@ export function UsersPage() {
             </div>
             {!list ? (
               users.error ? <LoadFailed what="users" onRetry={users.reload} /> : <SkeletonRows columns={HEAD.map(([, w]) => w)} grow />
-            ) : list.items.length === 0 ? (
+            ) : list.items.length === 0 && list.page === page ? (
               <EmptyState>{filtered ? "No users match your search or filters." : "No users yet. Use Add User to create the first one."}</EmptyState>
             ) : null}
             {list?.items.map((u) => (

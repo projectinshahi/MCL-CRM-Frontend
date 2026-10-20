@@ -40,6 +40,12 @@ export function flash(tone: "success" | "error" | "warning" | "info", title: str
 /** Session gone: back to the login screen with an explanation. A full reload drops all client state. */
 function sessionExpired() {
   if (window.location.pathname === "/login") return;
+  // A message already queued means a move to /login is under way (signing out): a late 401 must not replace it.
+  try {
+    if (sessionStorage.getItem(FLASH_KEY)) return;
+  } catch {
+    // storage unavailable: carry on
+  }
   flash("warning", "Your session has expired", "Please sign in again to continue.");
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full reload drops all client state once the session is gone
   window.location.assign("/login");
@@ -166,6 +172,13 @@ export function useDebounced<T>(value: T, ms = 300) {
 }
 
 export type List<T> = { items: T[]; page: number; pageSize: number; total: number };
+
+/**
+ * The page to go to when the current page came back empty although it isn't page 1 (its last row was just removed,
+ * here or elsewhere): the new last page. Null otherwise, and while the list held is another page's (loading).
+ */
+export const pastEnd = (list: List<unknown> | null, page: number) =>
+  list && !list.items.length && page > 1 && list.page === page ? Math.max(1, Math.ceil(list.total / list.pageSize)) : null;
 
 /** Props for <Pagination> from a list response: "Showing 1 to 20 of 54 Leads". */
 export function paging<T>(list: List<T> | null, noun: string, onPage: (page: number) => void) {

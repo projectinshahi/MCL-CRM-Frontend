@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, use, useCallback, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { createContext, use, useCallback, useLayoutEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useToast } from "@/components/feedback";
 import { FilterMenu, PageHeader, Popover, PrimaryButton, SearchBox, ToolButton } from "@/components/ui";
 import { CreateLeadModal, PRIORITIES, useLookups } from "@/components/leads/LeadModals";
@@ -116,6 +116,16 @@ export function LeadsView({ children }: { children: ReactNode }) {
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
   const all = useApi<List<unknown>>("/leads", { pageSize: 1 }, version);
   const total = all.data?.total;
+  // Switching Table ↔ Pipeline replays the dissolve on the same element. A key={pathname} remount did that before,
+  // but it also threw both kept views away (Next keeps visited pages mounted): the table lost its page, and every
+  // switch, even back from a lead, showed skeletons and fetched the leads or the whole board again.
+  const view = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    for (const a of view.current?.getAnimations() ?? []) {
+      a.cancel();
+      a.play();
+    }
+  }, [pipeline]);
 
   return (
     <LeadsCtx value={{ search, q, setSearch, filter, setFilter, version, refresh }}>
@@ -134,7 +144,7 @@ export function LeadsView({ children }: { children: ReactNode }) {
             </div>
           )}
         </div>
-        <div key={pathname} className="min-w-0 animate-dissolve">
+        <div ref={view} className="min-w-0 animate-dissolve">
           {children}
         </div>
       </div>

@@ -69,7 +69,9 @@ export async function shrink(file: File): Promise<File | null> {
 
 /** The file ready to upload: compressed when that helps, refused when still over the limit. */
 export async function prepare(file: File): Promise<Omit<Picked, "key">> {
-  const smaller = await shrink(file);
+  // A photo the browser can't re-encode (out of memory, say) goes as it is: a rejection here left the file
+  // "Compressing…" for good, and the form can't be sent until every file is ready.
+  const smaller = await shrink(file).catch(() => null);
   const out = smaller ?? file;
   if (out.size > MAX_FILE_BYTES) return { file, originalSize: null, error: tooBig(file.name, out.size, smaller ? " even after compressing" : "") };
   return { file: out, originalSize: smaller ? file.size : null };

@@ -129,13 +129,8 @@ export function PickField({ label, name, options, initial = "", placeholder, req
   const error = useErr(name);
   return (
     <Field label={label} error={error} required={required}>
-      <SelectField
-        value={options.find((o) => o.value === value)?.label ?? ""}
-        options={options.map((o) => o.label)}
-        onChange={(l) => setValue(options.find((o) => o.label === l)?.value ?? "")}
-        placeholder={placeholder}
-        invalid={!!error}
-      />
+      {/* By value: two users (or sources) with the same name are still two different choices. */}
+      <SelectField value={value} options={options} display={options.find((o) => o.value === value)?.label ?? ""} onChange={setValue} placeholder={placeholder} invalid={!!error} />
       <input suppressHydrationWarning type="hidden" name={name} value={value} />
     </Field>
   );
@@ -544,7 +539,7 @@ function DueField() {
   );
 }
 
-// Stored on the lead; who is reminded and how is still to be decided (report Q18/Q19).
+// Stored on the lead; at its time the API notifies whoever scheduled it and the lead's owner (bell + Notifications).
 export function ReminderModal({ leadId, open, onClose, onDone }: { leadId: string; open: boolean; onClose: () => void; onDone: () => void }) {
   return (
     <SmallForm

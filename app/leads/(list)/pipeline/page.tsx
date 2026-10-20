@@ -32,7 +32,7 @@ import { ConvertLeadModal } from "@/components/leads/ConvertLead";
 import { EditLeadModal, leadRemoval, type Lead, type Status } from "@/components/leads/LeadModals";
 import { useLeads } from "@/components/leads/LeadsView";
 import { api, ApiError, cap, day, inr, useApi } from "@/lib/api";
-import { place, type Column } from "@/lib/pipeline";
+import { place, reconcile, type Column } from "@/lib/pipeline";
 
 const action = "flex items-center rounded-[16px] border-[0.5px] border-stroke2 bg-primary px-2 py-[6px] text-[10px] font-medium tracking-[-0.4px] text-black";
 const label = "w-[39px] text-center";
@@ -128,6 +128,16 @@ export default function LeadsPipelinePage() {
   // Per lead whose move is being saved: the server's last copy (its version, and where an undo goes) and the stage
   // the user chose last. A card moved again meanwhile goes there at once; that stage alone is sent next.
   const saves = useRef(new Map<string, { server: Lead; want: Status }>());
+  // The server's copy after each move saved here. A board read (a search, another lead's edit, coming back to the
+  // page) can leave before a move is saved and arrive after it: reconcile() keeps the move instead of showing the
+  // card back in its old column. ponytail: never pruned; one entry per lead moved while the page is open.
+  const savedCopies = useRef(new Map<string, Lead>());
+  useEffect(() => {
+    const data = board.data;
+    if (!data) return;
+    const moving = () => [...saves.current.values()].map((s) => ({ ...s.server, status: s.want }));
+    if (reconcile(data, savedCopies.current.values(), moving()) !== data) mutate((b) => reconcile(b, savedCopies.current.values(), moving()));
+  }, [board.data, mutate]);
   const toast = useToast();
   const { remove, removing } = useRemove(refresh);
   // Stable, so a move re-renders only the card that moved (CardContents is memoised), not every card on the board.
@@ -159,6 +169,7 @@ export default function LeadsPipelinePage() {
           // One request per lead at a time, each with the version the previous one returned (no false conflicts).
           while (save.server.status.id !== save.want.id)
             save.server = await api<Lead>(`/leads/${lead.id}`, { method: "PATCH", body: { statusId: save.want.id, version: save.server.version } });
+          savedCopies.current.set(lead.id, save.server);
           mutate((b) => place(b, save.server));
         } catch (err) {
           keepFocus(lead.id);

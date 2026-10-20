@@ -35,3 +35,26 @@ export function place<C extends Card, B extends { columns: Column<C>[] }>(board:
   });
   return { ...board, columns };
 }
+
+type Versioned = Card & { version: number };
+const find = <C extends Card>(board: { columns: Column<C>[] }, id: string) => board.columns.flatMap((c) => c.items).find((i) => i.id === id);
+
+/**
+ * A board read from the server with this tab's own moves kept: the read may have left before a move was saved and
+ * come back after its reply (or while it is still saving), which put the card back in its old column, with wrong
+ * counts, until the next refresh. `saved`: the server's copy after each move this tab saved; a card the read has at
+ * an older version gets it back (the same version or a newer one, say someone else's later edit, is the read's).
+ * `moving`: cards whose move is still being saved, in the stage chosen last. Unchanged → the same board object.
+ */
+export function reconcile<C extends Versioned, B extends { columns: Column<C>[] }>(board: B, saved: Iterable<C>, moving: Iterable<C>): B {
+  let next = board;
+  for (const copy of saved) {
+    const shown = find(next, copy.id);
+    if (shown && shown.version < copy.version) next = place(next, copy);
+  }
+  for (const card of moving) {
+    const shown = find(next, card.id);
+    if (shown && shown.status.id !== card.status.id) next = place(next, { ...shown, status: card.status });
+  }
+  return next;
+}

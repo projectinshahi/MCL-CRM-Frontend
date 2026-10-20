@@ -3,11 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, use, useState } from "react";
+import { createContext, use, useEffect, useState } from "react";
 import { useToast } from "@/components/feedback";
-import { api, flash, useApi } from "@/lib/api";
+import { api, ApiError, flash, useApi } from "@/lib/api";
 import { setTheme, useTheme } from "@/lib/theme";
 import { Icon, type IconName } from "./Icon";
+import { LoadFailed } from "./ui";
+import { LiveNotifications, NotificationBell } from "./notifications";
 
 // perm = the API permission a page needs; the item is hidden without it (the API enforces it regardless).
 type NavItem = { label: string; icon: IconName; href?: string; perm?: string; onClick?: () => void };
@@ -87,7 +89,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // open tab on its next navigation instead of only after a reload.
   const [visit, setVisit] = useState({ path: pathname, n: 0 });
   if (visit.path !== pathname) setVisit({ path: pathname, n: visit.n + 1 });
-  const me = useApi<{ user: Me }>(isAuthRoute ? null : "/auth/me", undefined, visit.n).data?.user ?? null;
+  // …and when the user comes back to the tab, so a role change (say, gaining Notifications) shows without a reload.
+  useEffect(() => {
+    const onShow = () => document.visibilityState === "visible" && setVisit((v) => ({ ...v, n: v.n + 1 }));
+    document.addEventListener("visibilitychange", onShow);
+    return () => document.removeEventListener("visibilitychange", onShow);
+  }, []);
+  const account = useApi<{ user: Me }>(isAuthRoute ? null : "/auth/me", undefined, visit.n);
+  const me = account.data?.user ?? null;
   const toast = useToast();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -96,7 +105,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
     if (signingOut) return;
     setSigningOut(true);
     try {
-      await api("/auth/logout", { method: "POST" });
+      // 401: the session had already ended (expired, password changed, account deactivated): signed out all the same.
+      await api("/auth/logout", { method: "POST" }).catch((err) => {
+        if (!(err instanceof ApiError && err.status === 401)) throw err;
+      });
       flash("success", "You've been signed out");
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full reload drops all client state once the session is gone
       window.location.assign("/login");
@@ -119,85 +131,88 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <MeCtx value={me}>
-      <aside
-        className={`fixed top-0 left-0 z-40 flex h-dvh w-[300px] flex-col overflow-y-auto rounded-[8px] border-r border-stroke bg-primary transition-transform lg:translate-x-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex w-full shrink-0 items-center border-b border-stroke px-7 py-5">
-          <Image src="/img/logo.png" alt="MCL" width={82} height={72} priority className="h-[71.881px] w-[81.741px] object-cover" />
-          <div className="flex w-[131px] flex-col text-selected">
-            <p className="text-[26px] font-bold tracking-[-0.52px]">MCL</p>
-            <p className="text-[14px] font-medium tracking-[-0.28px] opacity-50">CRM PLATFORM</p>
+      <LiveNotifications userId={me?.permissions.includes("notifications") ? me.id : null} check={visit.n}>
+        <aside
+          className={`fixed top-0 left-0 z-40 flex h-dvh w-[300px] flex-col overflow-y-auto rounded-[8px] border-r border-stroke bg-primary transition-transform lg:translate-x-0 ${
+            open ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex w-full shrink-0 items-center border-b border-stroke px-7 py-5">
+            <Image src="/img/logo.png" alt="MCL" width={82} height={72} priority className="h-[71.881px] w-[81.741px] object-cover" />
+            <div className="flex w-[131px] flex-col text-selected">
+              <p className="text-[26px] font-bold tracking-[-0.52px]">MCL</p>
+              <p className="text-[14px] font-medium tracking-[-0.28px] opacity-50">CRM PLATFORM</p>
+            </div>
           </div>
-        </div>
-        <nav className="flex w-full flex-col gap-2 px-4 py-8" onClick={() => setOpen(false)}>
-          {MAIN_NAV.filter(allowed).map((item) => (
-            <NavLink key={item.label} item={item} active={isActive(item.href)} />
-          ))}
-          <div className="h-6 shrink-0" />
-          <div className="flex w-full flex-col gap-2 border-t border-stroke2">
-            {BOTTOM_NAV.filter(allowed).map((item) => item.label === "Logout" ? { ...item, label: signingOut ? "Signing out…" : item.label, onClick: logout } : item).map((item) => (
+          <nav className="flex w-full flex-col gap-2 px-4 py-8" onClick={() => setOpen(false)}>
+            {MAIN_NAV.filter(allowed).map((item) => (
               <NavLink key={item.label} item={item} active={isActive(item.href)} />
             ))}
-          </div>
-        </nav>
-      </aside>
-
-      {open && (
-        <div className="fixed inset-0 z-30 bg-scrim/25 lg:hidden" onClick={() => setOpen(false)} aria-hidden />
-      )}
-
-      <header className="fixed top-0 right-0 left-0 z-20 flex items-center justify-end gap-[26px] border-b border-stroke bg-primary px-6 pt-[14px] pb-[13px] lg:left-[300px]">
-        <button suppressHydrationWarning
-          type="button"
-          aria-label="Open menu"
-          onClick={() => setOpen(true)}
-          className="mr-auto flex size-6 cursor-pointer flex-col justify-center gap-[5px] lg:hidden"
-        >
-          <span className="h-[1.5px] w-full rounded bg-nav" />
-          <span className="h-[1.5px] w-full rounded bg-nav" />
-          <span className="h-[1.5px] w-full rounded bg-nav" />
-        </button>
-        <ThemeToggle />
-        {me?.permissions.includes("notifications") && (
-          <Link href="/notifications" aria-label="Notifications" className="text-nav">
-            <Icon name="notification-bing" />
-          </Link>
-        )}
-        <div className="flex items-center gap-[17px] sm:pr-5">
-          <div className="relative size-[50px] shrink-0">
-            <div className="flex size-full items-center justify-center rounded-full bg-[linear-gradient(141.61deg,#676ff6_15.93%,#cc4ec4_85.25%)] font-inter text-[19px] font-bold tracking-[-0.38px] text-white">
-              {me?.initials}
+            <div className="h-6 shrink-0" />
+            <div className="flex w-full flex-col gap-2 border-t border-stroke2">
+              {BOTTOM_NAV.filter(allowed).map((item) => item.label === "Logout" ? { ...item, label: signingOut ? "Signing out…" : item.label, onClick: logout } : item).map((item) => (
+                <NavLink key={item.label} item={item} active={isActive(item.href)} />
+              ))}
             </div>
-            <Image src="/img/online-dot.svg" alt="" width={21} height={21} className="absolute -right-[2px] -bottom-[2px] size-[21px] max-w-none" />
-          </div>
-          <div className="hidden flex-col sm:flex">
-            <p className="text-[18px] font-semibold tracking-[-0.36px] text-nav">{me?.name}</p>
-            <p className="text-[12px] font-medium tracking-[-0.24px] text-nav opacity-50">{me?.role.name}</p>
-          </div>
-        </div>
-      </header>
+          </nav>
+        </aside>
 
-      <main className="min-h-dvh pt-[77px] lg:pl-[300px]">
-        {denied ? (
-          <div className="flex flex-col items-start gap-3 p-4 sm:p-6">
-            <h1 className="text-[26px] font-semibold tracking-[-0.64px] text-black">No access</h1>
-            <p className="text-[16px] text-nav">Your role does not include {page.label}. Ask an administrator if you need it.</p>
-            {home?.href && (
-              <Link href={home.href} className="font-semibold text-link hover:underline">
-                Go to {home.label}
-              </Link>
-            )}
-          </div>
-        ) : (
-          // Until the permissions are known a gated page stays hidden, so it never shows before a "No access"; it is
-          // still mounted, so its data loads alongside them instead of after them (one round trip less on every load).
-          <div hidden={!me && !!page} className="contents">
-            {children}
-          </div>
+        {open && (
+          <div className="fixed inset-0 z-30 bg-scrim/25 lg:hidden" onClick={() => setOpen(false)} aria-hidden />
         )}
-      </main>
+
+        <header className="fixed top-0 right-0 left-0 z-20 flex items-center justify-end gap-[26px] border-b border-stroke bg-primary px-6 pt-[14px] pb-[13px] lg:left-[300px]">
+          <button suppressHydrationWarning
+            type="button"
+            aria-label="Open menu"
+            onClick={() => setOpen(true)}
+            className="mr-auto flex size-6 cursor-pointer flex-col justify-center gap-[5px] lg:hidden"
+          >
+            <span className="h-[1.5px] w-full rounded bg-nav" />
+            <span className="h-[1.5px] w-full rounded bg-nav" />
+            <span className="h-[1.5px] w-full rounded bg-nav" />
+          </button>
+          <ThemeToggle />
+          {me?.permissions.includes("notifications") && <NotificationBell />}
+          <div className="flex items-center gap-[17px] sm:pr-5">
+            <div className="relative size-[50px] shrink-0">
+              <div className="flex size-full items-center justify-center rounded-full bg-[linear-gradient(141.61deg,#676ff6_15.93%,#cc4ec4_85.25%)] font-inter text-[19px] font-bold tracking-[-0.38px] text-white">
+                {me?.initials}
+              </div>
+              <Image src="/img/online-dot.svg" alt="" width={21} height={21} className="absolute -right-[2px] -bottom-[2px] size-[21px] max-w-none" />
+            </div>
+            <div className="hidden flex-col sm:flex">
+              <p className="text-[18px] font-semibold tracking-[-0.36px] text-nav">{me?.name}</p>
+              <p className="text-[12px] font-medium tracking-[-0.24px] text-nav opacity-50">{me?.role.name}</p>
+            </div>
+          </div>
+        </header>
+
+        <main className="min-h-dvh pt-[77px] lg:pl-[300px]">
+          {!me && account.error ? (
+            // Without the account nothing can be shown (not even the menu): say so, with a way to try again.
+            <div className="p-4 sm:p-6">
+              <LoadFailed what="account details" onRetry={account.reload} />
+            </div>
+          ) : denied ? (
+            <div className="flex flex-col items-start gap-3 p-4 sm:p-6">
+              <h1 className="text-[26px] font-semibold tracking-[-0.64px] text-black">No access</h1>
+              <p className="text-[16px] text-nav">Your role does not include {page.label}. Ask an administrator if you need it.</p>
+              {home?.href && (
+                <Link href={home.href} className="font-semibold text-link hover:underline">
+                  Go to {home.label}
+                </Link>
+              )}
+            </div>
+          ) : (
+            // Until the permissions are known a gated page stays hidden, so it never shows before a "No access"; it is
+            // still mounted, so its data loads alongside them instead of after them (one round trip less on every load).
+            <div hidden={!me && !!page} className="contents">
+              {children}
+            </div>
+          )}
+        </main>
+      </LiveNotifications>
     </MeCtx>
   );
 }

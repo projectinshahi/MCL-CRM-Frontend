@@ -7,7 +7,7 @@ import { Skeleton, SkeletonCards, SkeletonRows, SubtitleSkeleton } from "@/compo
 import { Badge, EmptyState, FilterMenu, IconButton, LoadFailed, Modal, PageHeader, Pagination, Popover, PrimaryButton, SearchBox, ToolButton } from "@/components/ui";
 import { HistoryItem } from "@/components/followups/HistoryItem";
 import { NewFollowUpForm, TYPE_LABEL, type FollowUp } from "@/components/followups/NewFollowUpForm";
-import { api, cap, day, paging, useApi, useDebounced, type List } from "@/lib/api";
+import { api, cap, day, paging, pastEnd, useApi, useDebounced, type List } from "@/lib/api";
 
 const text = "shrink-0 text-[16px] font-medium text-black";
 // Figma's one "Mark As Completed" item (1:7999), repeated for each action.
@@ -38,7 +38,16 @@ export default function FollowUpsPage() {
   const refresh = () => setVersion((v) => v + 1);
   const { remove, removing } = useRemove(refresh);
 
-  const list = useApi<List<FollowUp> & { pendingCount: number; overdueCount: number }>("/follow-ups", { q: useDebounced(query), status, page }, version);
+  // A new search starts again at page 1 when it is sent: resetting on the first key fetched page 1 of the old search.
+  const q = useDebounced(query);
+  const [searched, setSearched] = useState(q);
+  if (searched !== q) {
+    setSearched(q);
+    setPage(1);
+  }
+  const list = useApi<List<FollowUp> & { pendingCount: number; overdueCount: number }>("/follow-ups", { q, status, page }, version);
+  const back = pastEnd(list.data, page); // the last follow-up on the last page was deleted
+  if (back) setPage(back);
   const history = useApi<List<History>>("/follow-ups/history", { page: historyPage, pageSize: 6 }, version);
 
   const markCompleted = async () => {
@@ -86,10 +95,7 @@ export default function FollowUpsPage() {
         <div className="flex flex-wrap items-center justify-end gap-2 pt-6 pb-5">
           <SearchBox
             value={query}
-            onChange={(v) => {
-              setQuery(v);
-              setPage(1);
-            }}
+            onChange={setQuery}
           />
           {/* Report: export scope not decided yet (report O1) */}
           <ToolButton label="Report" icon="download" onClick={() => notYet("Follow-up export")} />
@@ -121,7 +127,7 @@ export default function FollowUpsPage() {
 
             {!list.data && !list.error && <SkeletonRows columns={[300, 150, 140, 120, 120, 120, 80]} twoLine />}
             {!list.data && list.error && <LoadFailed what="follow-ups" onRetry={list.reload} />}
-            {list.data?.items.length === 0 && <EmptyState>{query || status ? "No follow-ups match your search or filter." : "No follow-ups yet. Use Add Follow - Up to schedule one."}</EmptyState>}
+            {list.data?.items.length === 0 && list.data.page === page && <EmptyState>{query || status ? "No follow-ups match your search or filter." : "No follow-ups yet. Use Add Follow - Up to schedule one."}</EmptyState>}
             {list.data?.items.map((f) => (
               <div key={f.id} className="flex items-center border-b border-stroke2 pt-[10px] pb-4">
                 <div className="flex w-[300px] shrink-0 flex-col gap-1 font-medium">

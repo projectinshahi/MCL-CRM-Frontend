@@ -36,8 +36,15 @@ export default function CustomersPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [page, setPage] = useState(1);
+  // A new search starts again at page 1 when it is sent: resetting on the first key fetched page 1 of the old search.
+  const q = useDebounced(query);
+  const [searched, setSearched] = useState(q);
+  if (searched !== q) {
+    setSearched(q);
+    setPage(1);
+  }
   const { created, ...rest } = filter;
-  const customers = useApi<List<Customer> & { activeCount: number }>("/customers", { q: useDebounced(query), ...rest, createdFrom: daysAgo(created), page });
+  const customers = useApi<List<Customer> & { activeCount: number }>("/customers", { q, ...rest, createdFrom: daysAgo(created), page });
   const [editing, setEditing] = useState<Customer | null>(null);
   const filterBtn = useRef<HTMLButtonElement>(null);
   const [filtering, setFiltering] = useState(false);
@@ -78,10 +85,7 @@ export default function CustomersPage() {
           <div className="flex flex-wrap items-center justify-end gap-2">
             <SearchBox
               value={query}
-              onChange={(v) => {
-                setQuery(v);
-                setPage(1);
-              }}
+              onChange={setQuery}
             />
             {/* Report: export scope not decided yet (report O1) */}
             <ToolButton label="Report" icon="download" onClick={() => notYet("Customer export")} />

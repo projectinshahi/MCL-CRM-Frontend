@@ -136,7 +136,8 @@ function ConvertedLead({ lead: l, original }: { lead: Lead; original: boolean })
 }
 
 /** The customer's own files: upload (compressed photos, progress, safe retries), download, remove. */
-function CustomerFiles({ customer: c, onChange }: { customer: Detail; onChange: (items: Attachment[]) => void }) {
+// onChange takes an update of the latest list: an upload can finish while a removal is being confirmed.
+function CustomerFiles({ customer: c, onChange }: { customer: Detail; onChange: (update: (items: Attachment[]) => Attachment[]) => void }) {
   const pickerId = useId();
   const toast = useToast();
   const confirm = useConfirm();
@@ -163,7 +164,7 @@ function CustomerFiles({ customer: c, onChange }: { customer: Detail; onChange: 
       toast.success("Files uploaded", `${picked.length} file${picked.length === 1 ? "" : "s"} added to ${c.name}.`);
       setPicked([]);
       ids.current.clear();
-      onChange(r.items);
+      onChange(() => r.items);
     } catch (err) {
       setProblem(fieldErrors(err).attachments);
       toast.apiError(err, "Couldn't upload the files");
@@ -179,7 +180,7 @@ function CustomerFiles({ customer: c, onChange }: { customer: Detail; onChange: 
     try {
       await api(`/customers/${c.id}/attachments/${a.id}`, { method: "DELETE" });
       toast.success("File removed", `“${a.fileName}” was removed.`);
-      onChange(c.attachments.filter((x) => x.id !== a.id));
+      onChange((items) => items.filter((x) => x.id !== a.id));
     } catch (err) {
       toast.apiError(err, "Couldn't remove the file");
     } finally {
@@ -367,7 +368,7 @@ export default function CustomerDetailPage() {
             </section>
             <section className={card}>
               <Heading icon="note">Files</Heading>
-              <CustomerFiles customer={c} onChange={(attachments) => customer.mutate((d) => ({ ...d, attachments }))} />
+              <CustomerFiles customer={c} onChange={(update) => customer.mutate((d) => ({ ...d, attachments: update(d.attachments) }))} />
             </section>
           </div>
         </div>

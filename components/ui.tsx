@@ -472,12 +472,18 @@ export function TextArea(props: React.ComponentProps<"textarea">) {
   return <textarea suppressHydrationWarning {...props} className={`${inputCls} h-[86px] resize-none ${props.className ?? ""}`} />;
 }
 
-// Dropdown field: input-styled trigger + designed option list (Figma 1:7760 / 1:7751 style)
-export function SelectField({ value, options, onChange, placeholder, icon = "arrow-right", iconSize = 18, iconClass = "rotate-90 text-black", className = "", invalid = false }: {
+// Dropdown field: input-styled trigger + designed option list (Figma 1:7760 / 1:7751 style). Options are plain
+// strings, or { value, label } when labels can repeat (two leads or users with the same name): those are told apart
+// by value, never by label. `display` overrides the trigger's text (e.g. while the options are still loading).
+// With `onSearch` the list gets a search box, for lists too long to send whole (the caller fetches the matches).
+export function SelectField({ value, options, onChange, placeholder, display, search, onSearch, icon = "arrow-right", iconSize = 18, iconClass = "rotate-90 text-black", className = "", invalid = false }: {
   value: string;
-  options: string[];
+  options: (string | { value: string; label: string })[];
   onChange: (v: string) => void;
   placeholder?: string;
+  display?: string;
+  search?: string;
+  onSearch?: (q: string) => void;
   icon?: IconName;
   iconSize?: number;
   iconClass?: string;
@@ -487,6 +493,8 @@ export function SelectField({ value, options, onChange, placeholder, icon = "arr
   const ref = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [width, setWidth] = useState(0);
+  const items = options.map((o) => (typeof o === "string" ? { value: o, label: o } : o));
+  const shown = display ?? items.find((o) => o.value === value)?.label ?? value;
   return (
     <>
       <button suppressHydrationWarning
@@ -499,26 +507,40 @@ export function SelectField({ value, options, onChange, placeholder, icon = "arr
         }}
         className={`${inputCls} flex cursor-pointer items-center justify-between text-left data-invalid:border-danger ${className}`}
       >
-        <span className={value ? "" : "opacity-50"}>{value || placeholder}</span>
+        <span className={shown ? "" : "opacity-50"}>{shown || placeholder}</span>
         <Icon name={icon} size={iconSize} className={iconClass} />
       </button>
       <Popover anchor={ref} open={open} onClose={() => setOpen(false)} dy={50}>
-        <ul className="overflow-hidden rounded-[9px] border border-stroke2 bg-primary" style={{ width }}>
-          {options.map((o) => (
-            <li key={o}>
-              <button suppressHydrationWarning
-                type="button"
-                onClick={() => {
-                  onChange(o);
-                  setOpen(false);
-                }}
-                className="w-full cursor-pointer border-b-[0.5px] border-stroke2 px-4 py-[10px] text-left text-[16px] tracking-[-0.32px] text-nav last:border-b-0 hover:bg-bg5 focus-visible:bg-bg5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
-              >
-                {o}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-hidden rounded-[9px] border border-stroke2 bg-primary" style={{ width }}>
+          {onSearch && (
+            <input
+              suppressHydrationWarning
+              type="search"
+              aria-label="Search"
+              placeholder="Search…"
+              value={search ?? ""}
+              onChange={(e) => onSearch(e.target.value)}
+              className="w-full border-b-[0.5px] border-stroke2 bg-bg5 px-4 py-[10px] text-[16px] tracking-[-0.32px] text-black outline-none placeholder:text-black/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+            />
+          )}
+          <ul>
+            {items.map((o) => (
+              <li key={o.value}>
+                <button suppressHydrationWarning
+                  type="button"
+                  onClick={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                  className="w-full cursor-pointer border-b-[0.5px] border-stroke2 px-4 py-[10px] text-left text-[16px] tracking-[-0.32px] text-nav last:border-b-0 hover:bg-bg5 focus-visible:bg-bg5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+                >
+                  {o.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {onSearch && !items.length && <p className="px-4 py-[10px] text-[14px] text-nav opacity-70">No matches</p>}
+        </div>
       </Popover>
     </>
   );

@@ -6,7 +6,7 @@ import { SkeletonRows } from "@/components/skeletons";
 import { Badge, EmptyState, IconButton, LoadFailed, Pagination } from "@/components/ui";
 import { EditLeadModal, leadRemoval, type Lead } from "@/components/leads/LeadModals";
 import { LeadTools, useLeads } from "@/components/leads/LeadsView";
-import { cap, day, inr, paging, useApi, type List } from "@/lib/api";
+import { cap, day, inr, paging, pastEnd, useApi, type List } from "@/lib/api";
 
 // Leads- Table (Figma 1:6132): column widths 400/100/100/90/120/120/100/80/120 = 1230
 const cell = "shrink-0 text-[16px] font-medium tracking-[-0.64px] text-black";
@@ -20,6 +20,8 @@ export default function LeadsTablePage() {
   const setPage = (p: number) => setPaged({ key, page: p });
   const [editing, setEditing] = useState<Lead | null>(null);
   const leads = useApi<List<Lead>>("/leads", { ...query, page }, version);
+  const back = pastEnd(leads.data, page); // the last lead on the last page was deleted
+  if (back) setPage(back);
 
   const { remove, removing } = useRemove(refresh);
 
@@ -46,7 +48,7 @@ export default function LeadsTablePage() {
 
           {!leads.data && !leads.error && <SkeletonRows columns={["flex", 100, 100, 90, 120, 120, 100, 80, 120]} />}
           {!leads.data && leads.error && <LoadFailed what="leads" onRetry={leads.reload} />}
-          {leads.data?.items.length === 0 && <EmptyState>{query.q || query.sourceId || query.priority ? "No leads match your search or filters." : "No leads yet. Use Add Lead to create the first one."}</EmptyState>}
+          {leads.data?.items.length === 0 && leads.data.page === page && <EmptyState>{query.q || query.sourceId || query.priority ? "No leads match your search or filters." : "No leads yet. Use Add Lead to create the first one."}</EmptyState>}
           {leads.data?.items.map((r) => (
             <div key={r.id} className="flex items-center border-b border-stroke2 pt-[10px] pb-4">
               <p className={`${cell} min-w-[400px] flex-1`}>{r.title}</p>

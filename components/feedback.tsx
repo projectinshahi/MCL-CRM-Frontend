@@ -53,7 +53,7 @@ export function useRemove(onRemoved: () => void) {
     } catch (err) {
       toast.apiError(err, o.failTitle);
     } finally {
-      setRemoving(null);
+      setRemoving((r) => (r === id ? null : r)); // another row's delete may have started meanwhile: keep its spinner
     }
   };
   return { remove, removing };
