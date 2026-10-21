@@ -222,10 +222,10 @@ export function LiveNotifications({ userId, check, children }: { userId: string 
 export function NotificationBell() {
   const { unread } = useLiveNotifications();
   return (
-    <Link href="/notifications" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} className="relative text-nav">
-      <Icon name="notification-bing" />
+    <Link href="/notifications" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} className="relative flex size-9 items-center justify-center rounded-full text-nav transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+      <Icon name="notification-bing" size={22} />
       {!!unread && (
-        <span aria-hidden className="absolute -top-[7px] -right-[9px] flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-[5px] text-[11px] leading-none font-semibold text-white">
+        <span aria-hidden className="absolute -top-0.5 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-[5px] text-[11px] leading-none font-semibold text-white">
           {unread > 99 ? "99+" : unread}
         </span>
       )}

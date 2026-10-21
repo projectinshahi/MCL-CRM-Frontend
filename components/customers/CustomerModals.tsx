@@ -93,7 +93,7 @@ function EditCustomerForm({ customer: c, onClose, onSaved }: { customer: Custome
             onSaved(saved);
           });
         }}
-        className="-mt-2 flex flex-col gap-6 pb-[30px]"
+        className="flex flex-col gap-5"
       >
         <div className="flex flex-col gap-4">
           <Row>
@@ -176,7 +176,7 @@ function ActivityForm({ customerId, onClose, onSaved }: { customerId: string; on
             onSaved();
           });
         }}
-        className="-mt-2 flex flex-col gap-6"
+        className="flex flex-col gap-5"
       >
         <div className="flex flex-col gap-4">
           <Row>

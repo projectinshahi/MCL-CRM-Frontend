@@ -85,7 +85,7 @@ export function PhoneInput({ id, name, defaultValue, onChange, error }: {
 
   return (
     <>
-      <div ref={wrap} data-invalid={message ? true : undefined} className="flex min-h-[46px] w-full min-w-0 items-stretch rounded-[16px] border border-stroke2 bg-bg5 transition-[border-color,box-shadow] duration-200 focus-within:border-stroke focus-within:shadow-[0_0_0_3px_rgb(71_215_251/0.25)] data-invalid:border-danger data-invalid:focus-within:shadow-[0_0_0_3px_rgb(249_74_74/0.18)]">
+      <div ref={wrap} data-invalid={message ? true : undefined} className="flex min-h-10 w-full min-w-0 items-stretch rounded-[12px] border border-stroke2 bg-bg5 transition-[border-color,box-shadow] duration-200 focus-within:border-stroke focus-within:shadow-[0_0_0_3px_rgb(71_215_251/0.25)] data-invalid:border-danger data-invalid:focus-within:shadow-[0_0_0_3px_rgb(249_74_74/0.18)]">
         <button
           suppressHydrationWarning
           ref={button}
@@ -94,11 +94,11 @@ export function PhoneInput({ id, name, defaultValue, onChange, error }: {
           aria-expanded={open}
           aria-label={buttonLabel}
           onClick={() => setOpen(true)}
-          className="flex shrink-0 cursor-pointer items-center gap-[6px] rounded-l-[16px] border-r border-stroke2 pr-3 pl-4 text-[16px] font-medium text-black outline-none hover:bg-[rgb(71_215_251/0.12)] focus-visible:bg-[rgb(71_215_251/0.2)]"
+          className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-l-[12px] border-r border-stroke2 pr-2.5 pl-3 text-[14px] font-medium text-black outline-none hover:bg-[rgb(71_215_251/0.12)] focus-visible:bg-[rgb(71_215_251/0.2)]"
         >
-          <span aria-hidden className="text-[20px] leading-none">{shown ? flag(shown) : "🌐"}</span>
+          <span aria-hidden className="text-[18px] leading-none">{shown ? flag(shown) : "🌐"}</span>
           {!international && country && <span className="tabular-nums">+{callingCodeOf(country)}</span>}
-          <Icon name="arrow-right" size={16} className="rotate-90 text-nav" />
+          <Icon name="arrow-right" size={14} className="rotate-90 text-nav" />
         </button>
         <input
           suppressHydrationWarning
@@ -114,17 +114,17 @@ export function PhoneInput({ id, name, defaultValue, onChange, error }: {
           placeholder={phonePlaceholder(international ? undefined : country)}
           aria-invalid={!!message}
           aria-describedby={describedBy}
-          className="w-full min-w-0 bg-transparent px-4 py-[12px] text-[16px] leading-5 font-medium text-black outline-none placeholder:text-black/50"
+          className="w-full min-w-0 bg-transparent px-3.5 py-[9px] text-[14px] leading-5 font-medium text-black outline-none placeholder:text-black/50"
         />
       </div>
       {name && <input type="hidden" name={name} value={value} />}
       {hint && (
-        <p id={`${id}-hint`} className="text-[14px] text-nav">
+        <p id={`${id}-hint`} className="text-[13px] text-nav">
           This saved number couldn&apos;t be verified. It stays as it is unless you change it.
         </p>
       )}
       <FieldError id={`${id}-error`} message={message} />
-      <Popover anchor={wrap} open={open} onClose={() => setOpen(false)} dy={52}>
+      <Popover anchor={wrap} open={open} onClose={() => setOpen(false)} dy={44}>
         <CountryPicker
           selected={shown ?? country}
           onPick={pick}
@@ -165,7 +165,7 @@ function CountryPicker({ selected, onPick, onDismiss }: { selected?: CountryCode
   };
 
   return (
-    <div className="flex w-[min(360px,calc(100vw-16px))] flex-col overflow-hidden rounded-[16px] border border-stroke2 bg-primary shadow-[0_12px_32px_rgb(21_46_175/0.14)]">
+    <div className="flex w-[min(340px,calc(100vw-16px))] flex-col overflow-hidden rounded-[12px] border border-stroke2 bg-primary shadow-[0_12px_32px_rgb(21_46_175/0.14)]">
       <div className="border-b border-stroke2 p-2">
         <input
           suppressHydrationWarning
@@ -183,7 +183,7 @@ function CountryPicker({ selected, onPick, onDismiss }: { selected?: CountryCode
             setActive(0);
           }}
           onKeyDown={key}
-          className="h-10 w-full rounded-[12px] border border-stroke2 bg-bg5 px-3 text-[16px] font-medium text-black outline-none placeholder:text-black/50 focus:border-stroke"
+          className="h-9 w-full rounded-[10px] border border-stroke2 bg-bg5 px-3 text-[14px] font-medium text-black outline-none placeholder:text-black/50 focus:border-stroke"
         />
       </div>
       <ul id={listId} role="listbox" aria-label="Countries" className="max-h-[min(288px,45dvh)] overflow-y-auto overscroll-contain py-1">
@@ -195,14 +195,14 @@ function CountryPicker({ selected, onPick, onDismiss }: { selected?: CountryCode
             aria-selected={i === active}
             onMouseMove={() => i !== active && setActive(i)}
             onClick={() => onPick(c.code)}
-            className={`flex cursor-pointer items-center gap-3 px-4 py-[9px] text-[16px] text-nav ${i === active ? "bg-[rgb(71_215_251/0.2)]" : ""}`}
+            className={`flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-[14px] text-nav ${i === active ? "bg-[rgb(71_215_251/0.2)]" : ""}`}
           >
-            <span aria-hidden className="text-[20px] leading-none">{flag(c.code)}</span>
+            <span aria-hidden className="text-[18px] leading-none">{flag(c.code)}</span>
             <span className={`min-w-0 flex-1 truncate ${c.code === selected ? "font-semibold text-black" : ""}`}>{c.name}</span>
             <span className="text-black/60 tabular-nums">+{c.callingCode}</span>
           </li>
         ))}
-        {!results.length && <li className="px-4 py-3 text-[14px] text-muted">No country matches “{query}”.</li>}
+        {!results.length && <li className="px-3.5 py-2.5 text-[13px] text-muted">No country matches “{query}”.</li>}
       </ul>
     </div>
   );

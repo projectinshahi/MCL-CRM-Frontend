@@ -17,11 +17,11 @@ const PAGE_SIZE = 20;
 const gone = (err: unknown) => err instanceof ApiError && err.status === 404;
 
 const toolButton =
-  "flex shrink-0 cursor-pointer items-center gap-2 rounded-[18px] border border-stroke2 bg-bg5 px-[17px] py-[13px] text-[16px] leading-5 font-medium whitespace-nowrap text-nav focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:opacity-50";
+  "flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-[12px] border border-stroke2 bg-bg5 px-3.5 text-[14px] font-medium whitespace-nowrap text-nav focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:opacity-50";
 
 function SpeakerIcon({ on }: { on: boolean }) {
   return (
-    <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
       <path d="M11 5 6 9H3v6h3l5 4V5Z" />
       {on ? <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /> : <path d="m16 9 5 6m0-6-5 6" />}
     </svg>
@@ -154,25 +154,25 @@ export default function NotificationsPage() {
   );
 
   return (
-    <div className="flex flex-col gap-[18px] p-4 sm:p-6">
+    <div className="flex flex-col gap-3 p-4 sm:p-6">
       <SectionHeader title="Notifications" subtitle={feed ? `${feed.unreadCount} Unread Notifications` : !list.error && <SubtitleSkeleton />} action={actions} />
       {!feed && !list.error && (
-        <SkeletonCards className="flex flex-col gap-[10px] rounded-[24px] border border-stroke2 bg-primary p-5">
-          <div className="flex items-center gap-2">
-            <Skeleton className="size-[10px] shrink-0 rounded-full" />
-            <Skeleton className="h-5 w-1/2" />
+        <SkeletonCards className="flex flex-col gap-2 rounded-[14px] border border-stroke2 bg-primary px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-2 shrink-0 rounded-full" />
+            <Skeleton className="h-4 w-1/2" />
           </div>
-          <Skeleton className="ml-5 h-4 w-36" />
+          <Skeleton className="ml-5 h-3 w-32" />
         </SkeletonCards>
       )}
       {!feed && list.error && <LoadFailed what="notifications" onRetry={list.reload} />}
-      {feed?.total === 0 && <p className="text-[16px] text-nav opacity-70">No notifications yet.</p>}
+      {feed?.total === 0 && <p className="text-[14px] text-nav opacity-70">No notifications yet.</p>}
       {feed?.items.map((n) => (
-        <article key={n.id} className="flex flex-col gap-[10px] rounded-[24px] border border-stroke2 bg-primary p-5">
-          {/* dot pinned to the first line (= centred on Figma's single 22px line) when the title wraps */}
-          <div className="flex items-start gap-2">
-            <span className={`mt-[6px] size-[10px] shrink-0 rounded-full ${n.read ? "bg-[rgb(106_155_239/0.25)]" : "bg-[#00d14c]"}`} />
-            <p className="min-w-0 flex-1 text-[18px] font-medium tracking-[-0.72px] break-words text-black">
+        <article key={n.id} className="flex items-center gap-3 rounded-[14px] border border-stroke2 bg-primary px-4 py-3">
+          {/* dot pinned to the first line when the title wraps; the actions sit beside the whole text, not its first line */}
+          <span className={`mt-[7px] size-2 shrink-0 self-start rounded-full ${n.read ? "bg-[rgb(106_155_239/0.35)]" : "bg-[#00d14c]"}`} />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <p className="text-[15px] font-medium break-words text-black">
               {n.link ? (
                 <Link href={n.link} onClick={() => markRead(n)} className="hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
                   {n.title}
@@ -181,13 +181,13 @@ export default function NotificationsPage() {
                 n.title
               )}
             </p>
-            <div className="flex shrink-0 items-center gap-2">
-              {!n.read && <IconButton icon="mark" label="Mark as read" onClick={() => markRead(n)} />}
-              <IconButton icon="delete" label="Remove notification" onClick={() => remove(n)} />
-            </div>
+            {n.detail && <p className="text-[14px] text-nav opacity-80">{n.detail}</p>}
+            <p className="text-[12px] text-nav opacity-70">{dateTime(n.createdAt)}</p>
           </div>
-          {n.detail && <p className="pl-5 text-[16px] tracking-[-0.64px] text-nav opacity-70">{n.detail}</p>}
-          <p className="pl-5 text-[14px] tracking-[-0.56px] text-nav opacity-70">{dateTime(n.createdAt)}</p>
+          <div className="flex shrink-0 items-center gap-1">
+            {!n.read && <IconButton icon="mark" label="Mark as read" onClick={() => markRead(n)} />}
+            <IconButton icon="delete" label="Remove notification" onClick={() => remove(n)} />
+          </div>
         </article>
       ))}
       {!!feed && feed.total > PAGE_SIZE && <Pagination {...paging(feed, "Notifications", setPage)} />}

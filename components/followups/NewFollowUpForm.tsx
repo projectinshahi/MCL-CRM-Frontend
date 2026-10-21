@@ -37,10 +37,10 @@ function DateField({ value, onChange, invalid }: { value: string; onChange: (v: 
         type="button"
         onClick={() => ref.current?.showPicker()}
         data-invalid={invalid || undefined}
-        className="flex min-h-[46px] w-full cursor-pointer items-center gap-[10px] rounded-[16px] border border-stroke2 bg-bg5 py-3 pr-[11px] pl-[23px] text-left text-[16px] font-medium text-black data-invalid:border-danger"
+        className="flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-[12px] border border-stroke2 bg-bg5 px-3.5 py-[9px] text-left text-[14px] leading-5 font-medium text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-invalid:border-danger"
       >
         <span className={`flex-1 ${value ? "" : "opacity-50"}`}>{value ? fmt(value) : "00/00/0000"}</span>
-        <Icon name="calendar" size={18} className="text-nav" />
+        <Icon name="calendar" size={16} className="text-nav" />
       </button>
       <input suppressHydrationWarning
         ref={ref}
@@ -124,7 +124,7 @@ export function NewFollowUpForm({ followUp, onCancel, onSaved }: { followUp?: Fo
           setSaving(false);
         }
       }}
-      className="-mt-2 flex flex-col gap-6"
+      className="flex flex-col gap-5"
     >
       <div className="flex flex-col gap-4">
         {/* Figma selects: pl-24 pr-12 (inside stroke) */}
@@ -137,10 +137,10 @@ export function NewFollowUpForm({ followUp, onCancel, onSaved }: { followUp?: Fo
             {...(!followUp && { search: leadQuery, onSearch: setLeadQuery })}
             placeholder="Select a lead"
             invalid={!!errors.leadId}
-            className="pr-[11px]"
+            className="pr-3"
           />
         </Field>
-        <div className="flex flex-col gap-4 sm:flex-row sm:gap-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-3">
           <Field label="Follow Up Date" error={errors.followUpDate} required>
             <DateField value={date} onChange={change("followUpDate", setDate)} invalid={!!errors.followUpDate} />
           </Field>
@@ -151,7 +151,7 @@ export function NewFollowUpForm({ followUp, onCancel, onSaved }: { followUp?: Fo
         <Field label="Subject/ Note" error={errors.note} required>
           <TextArea placeholder="Follow Up On Proposal" value={note} onChange={(e) => change("note", setNote)(e.target.value)} aria-invalid={!!errors.note} aria-required />
         </Field>
-        <div className="flex flex-col gap-4 sm:flex-row sm:gap-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-3">
           <Field label="Follow Up Type" error={errors.type}>
             <SelectField value={type} options={TYPES.map(([, l]) => l)} onChange={change("type", setType)} placeholder="WhatsApp" invalid={!!errors.type} className="pr-[11px]" />
           </Field>

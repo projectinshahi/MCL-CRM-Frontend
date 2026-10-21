@@ -15,9 +15,9 @@ const FSC_NOTE = "Please Verify The Latest Fuel Surcharge (FSC) With The Interna
 /* ---------- Table: Figma rows are flex/justify-between with fixed column widths ---------- */
 // w = Figma width; min = narrowest the column may shrink to (its text + breathing room) before the table scrolls inside its card.
 type Col = { w: number; min: number; center?: boolean };
-const HEAD = "items-start py-5 text-[18px] font-semibold tracking-[-0.72px] *:opacity-80";
-const BODY = "items-center pt-[10px] pb-4 text-[16px] tracking-[-0.64px]";
-const TOTAL = "items-center pt-5 pb-9 text-[16px] font-semibold tracking-[-0.64px] uppercase";
+const HEAD = "items-start py-3 text-[13px] font-semibold *:opacity-80";
+const BODY = "items-center py-2.5 text-[14px]";
+const TOTAL = "items-center py-3 text-[14px] font-semibold uppercase";
 
 function Row({ cols, cells, className }: { cols: Col[]; cells: ReactNode[]; className: string }) {
   return (
@@ -34,8 +34,8 @@ function Row({ cols, cells, className }: { cols: Col[]; cells: ReactNode[]; clas
 function Table({ cols, head, rows, total }: { cols: Col[]; head: string[]; rows: ReactNode[][]; total?: string[] }) {
   return (
     <div className="overflow-x-auto">
-      <div className="flex flex-col gap-5" style={{ minWidth: cols.reduce((s, c) => s + c.min, 0) }}>
-        <div className="flex flex-col gap-[10px]">
+      <div className="flex flex-col" style={{ minWidth: cols.reduce((s, c) => s + c.min, 0) }}>
+        <div className="flex flex-col">
           <Row cols={cols} cells={head} className={HEAD} />
           {rows.map((r, i) => (
             <Row key={i} cols={cols} cells={r} className={BODY} />
@@ -47,7 +47,7 @@ function Table({ cols, head, rows, total }: { cols: Col[]; head: string[]; rows:
   );
 }
 
-function Card({ title, action, note, noteCls = "py-5 text-[12px]", className = "", children }: {
+function Card({ title, action, note, noteCls = "py-4 text-[12px]", className = "", children }: {
   title: string;
   action?: ReactNode;
   note: string;
@@ -56,9 +56,9 @@ function Card({ title, action, note, noteCls = "py-5 text-[12px]", className = "
   children: ReactNode;
 }) {
   return (
-    <section className={`flex min-w-0 flex-col gap-[10px] rounded-[22px] border border-stroke2 bg-primary px-5 ${className}`}>
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-6 pb-5">
-        <h2 className="text-[28px] font-medium text-black">{title}</h2>
+    <section className={`flex min-w-0 flex-col rounded-[16px] border border-stroke2 bg-primary px-4 sm:px-5 ${className}`}>
+      <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-3 py-4">
+        <h2 className="text-[18px] font-semibold tracking-[-0.36px] text-black">{title}</h2>
         {action}
       </div>
       {children}
@@ -67,32 +67,32 @@ function Card({ title, action, note, noteCls = "py-5 text-[12px]", className = "
   );
 }
 
-const RATE_COLS: Col[] = [{ w: 300, min: 180 }, { w: 160, min: 100, center: true }, { w: 160, min: 100, center: true }, { w: 160, min: 130, center: true }];
-const BREAKDOWN_COLS: Col[] = [{ w: 300, min: 125 }, { w: 160, min: 120, center: true }, { w: 160, min: 90, center: true }];
+const RATE_COLS: Col[] = [{ w: 260, min: 160 }, { w: 140, min: 90, center: true }, { w: 140, min: 90, center: true }, { w: 140, min: 116, center: true }];
+const BREAKDOWN_COLS: Col[] = [{ w: 260, min: 112 }, { w: 140, min: 108, center: true }, { w: 140, min: 80, center: true }];
 const RECENT_COLS: Col[] = [
-  { w: 300, min: 174 },
-  { w: 160, min: 156 },
-  { w: 160, min: 140 },
-  { w: 160, min: 134, center: true },
-  { w: 160, min: 160 },
-  { w: 160, min: 74, center: true },
-  { w: 160, min: 72, center: true },
+  { w: 260, min: 156 },
+  { w: 140, min: 140 },
+  { w: 140, min: 126 },
+  { w: 140, min: 120, center: true },
+  { w: 140, min: 144 },
+  { w: 140, min: 66, center: true },
+  { w: 140, min: 64, center: true },
 ];
 
-// Edit overlay 1:8122 is styled differently from the shared Modal (Inter, #1e2834 border, 45px inputs).
+// Edit overlay 1:8122 is styled differently from the shared Modal (Inter, #1e2834 border); inputs as in every form.
 const editInput =
-  "h-[45px] w-full rounded-[16px] border border-stroke2 bg-bg5 px-6 text-[16px] text-nav outline-none placeholder:text-nav/70 focus:border-stroke";
+  "h-10 w-full rounded-[12px] border border-stroke2 bg-bg5 px-3.5 text-[14px] text-nav outline-none placeholder:text-nav/70 focus:border-stroke";
 function EditField({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex min-w-0 flex-col gap-[6px]">
-      <span className="text-[20px] text-nav">{label}</span>
+    <label className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-[14px] text-nav">{label}</span>
       {children}
     </label>
   );
 }
 
-const label = "text-[16px] font-medium text-black opacity-70";
-const column = "flex min-w-[257px] flex-1 flex-col justify-center gap-3";
+const label = "text-[13px] font-medium text-black opacity-70";
+const column = "flex min-w-[220px] flex-1 flex-col justify-center gap-2";
 
 export default function CalculatorPage() {
   // Figma toggle 1:8171: "Default" variant (1:8172) = NDOX selected.
@@ -116,19 +116,19 @@ export default function CalculatorPage() {
   }, [editing]);
 
   return (
-    <div className="flex flex-col gap-[18px] p-4 sm:p-6">
+    <div className="flex flex-col gap-4 p-4 sm:p-6">
       <PageHeader title="International Rate Calculator" subtitle="Enter Shipment Details And International Courier Tariffs" />
 
       {/* Shipment input (Figma 1:6266) */}
-      <section className="flex flex-col gap-4 rounded-[22px] border border-stroke2 bg-primary p-5">
-        <div className="flex flex-wrap items-end gap-[18px]">
+      <section className="flex flex-col gap-3 rounded-[16px] border border-stroke2 bg-primary p-4 sm:p-5">
+        <div className="flex flex-wrap items-end gap-4">
           <div className={column}>
             <p className={label}>DOX / NDOX</p>
             {/* Variant change on click: Smart Animate 300ms ease-out = sliding pill */}
-            <div className="relative flex w-fit gap-[7px] rounded-[16px] border border-stroke2 bg-bg5 p-1">
+            <div className="relative flex w-fit gap-1 rounded-[12px] border border-stroke2 bg-bg5 p-[3px]">
               <span
                 aria-hidden
-                className={`absolute top-1 bottom-1 left-1 w-[120px] rounded-[12px] bg-button transition-transform ${doc === "NDOX" ? "translate-x-[127px]" : ""}`}
+                className={`absolute top-[3px] bottom-[3px] left-[3px] w-[100px] rounded-[9px] bg-button transition-transform ${doc === "NDOX" ? "translate-x-[104px]" : ""}`}
               />
               {DOC_TYPES.map((d) => (
                 <button suppressHydrationWarning
@@ -136,7 +136,7 @@ export default function CalculatorPage() {
                   type="button"
                   aria-pressed={doc === d}
                   onClick={() => setDoc(d)}
-                  className={`relative w-[120px] cursor-pointer px-4 py-[10px] text-[16px] font-medium transition-colors ${doc === d ? "text-white" : "text-black"}`}
+                  className={`relative h-8 w-[100px] cursor-pointer rounded-[9px] text-[14px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${doc === d ? "text-white" : "text-black"}`}
                 >
                   {d}
                 </button>
@@ -150,14 +150,14 @@ export default function CalculatorPage() {
               options={COUNTRIES}
               onChange={setCountry}
               icon="caret-down"
-              iconSize={24}
+              iconSize={20}
               iconClass="text-nav"
-              className="max-w-[460px] pr-3 pl-6 text-nav"
+              className="max-w-[400px] pr-3 text-nav"
             />
           </div>
           <div className={column}>
             <p className={label}>Weight (in kgs)</p>
-            <label className="flex h-[50px] w-[200px] items-center gap-2 rounded-[16px] border border-stroke2 bg-bg5 pr-3 pl-6 text-[16px] font-medium text-nav">
+            <label className="flex h-10 w-[180px] items-center gap-2 rounded-[12px] border border-stroke2 bg-bg5 pr-3 pl-3.5 text-[14px] font-medium text-nav transition-[border-color,box-shadow] focus-within:border-stroke focus-within:shadow-[0_0_0_3px_rgb(71_215_251/0.25)]">
               <input suppressHydrationWarning
                 inputMode="decimal"
                 aria-label="Weight (in kgs)"
@@ -174,7 +174,7 @@ export default function CalculatorPage() {
             suppressHydrationWarning
             type="button"
             onClick={() => toast.info("Live rates aren't available yet", "The table below shows sample tariffs until real courier rates are connected.")}
-            className="h-[49px] shrink-0 cursor-pointer rounded-[16px] bg-button px-[18px] text-[16px] font-medium whitespace-nowrap text-white"
+            className="h-10 shrink-0 cursor-pointer rounded-[12px] bg-button px-4 text-[14px] font-medium whitespace-nowrap text-white transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             Calculate Rates
           </button>
@@ -186,17 +186,17 @@ export default function CalculatorPage() {
         <Table cols={RATE_COLS} head={RATE_HEAD} rows={RATE_ROWS} total={RATE_TOTAL} />
       </Card>
 
-      <div className="flex flex-col gap-[18px] min-[1400px]:flex-row">
+      <div className="flex flex-col gap-4 min-[1400px]:flex-row">
         <Card title="Calculation Breakdown" note={FSC_NOTE} className="flex-1">
           <Table cols={BREAKDOWN_COLS} head={BREAKDOWN_HEAD} rows={BREAKDOWN_ROWS} total={BREAKDOWN_TOTAL} />
         </Card>
         <Card
           title="Reference Information"
           className="flex-1"
-          noteCls="py-[21px] text-[14px]"
+          noteCls="py-4 text-[13px]"
           note="Rates are illustrative andbased on the latest available rate chart entry. please update FDC using the international departments current rate"
         >
-          <div className="flex flex-col gap-[10px] rounded-[22px] bg-[rgb(71_215_251/0.16)] px-4 text-black">
+          <div className="flex flex-col rounded-[14px] bg-[rgb(71_215_251/0.16)] px-4 text-black">
             {[
               ["Rate Details", "DHL"],
               ["Document Type", doc],
@@ -206,11 +206,11 @@ export default function CalculatorPage() {
             ].map(([k, v], i) => (
               <div
                 key={k}
-                className={`flex flex-col gap-1 border-stroke2 py-5 *:opacity-80 not-last:border-b sm:flex-row sm:items-center sm:gap-16 ${
-                  i === 0 ? "text-[18px] font-semibold tracking-[-0.72px]" : "text-[16px] font-medium tracking-[-0.64px]"
+                className={`flex flex-col gap-1 border-stroke2 py-3 *:opacity-80 not-last:border-b sm:flex-row sm:items-center sm:gap-8 ${
+                  i === 0 ? "text-[14px] font-semibold" : "text-[14px] font-medium"
                 }`}
               >
-                <p className="sm:shrink sm:basis-[300px]">{k}</p>
+                <p className="sm:shrink sm:basis-[220px]">{k}</p>
                 <p className="min-w-0 whitespace-pre-wrap sm:flex-[1_1_455px]">{v}</p>
               </div>
             ))}
@@ -218,7 +218,7 @@ export default function CalculatorPage() {
         </Card>
       </div>
 
-      <Card title="Recent Calculations" note={FSC_NOTE} action={<div className="h-12" />}>
+      <Card title="Recent Calculations" note={FSC_NOTE}>
         <Table
           cols={RECENT_COLS}
           head={RECENT_HEAD}
@@ -232,26 +232,26 @@ export default function CalculatorPage() {
                 moreRef.current = e.currentTarget;
                 setMenuId(r.id);
               }}
-              className="mx-auto flex cursor-pointer text-nav"
+              className="mx-auto flex size-8 cursor-pointer items-center justify-center rounded-[8px] text-nav hover:bg-bg5"
             >
-              <Icon name="more" />
+              <Icon name="more" size={20} />
             </button>,
           ])}
         />
       </Card>
 
       {/* ⋮ → Edit/Delete menu 1:8158: MANUAL overlay at (-131.39, 24.6) from the icon, 25% backdrop */}
-      <Popover anchor={moreRef} open={menuId !== null} onClose={() => setMenuId(null)} dx={-131.39} dy={24.6}>
-        <div className="flex w-[156px] flex-col overflow-hidden rounded-[16px] border border-stroke2 bg-bg5 text-[16px] tracking-[-0.64px] text-nav">
+      <Popover anchor={moreRef} open={menuId !== null} onClose={() => setMenuId(null)} dx={-112} dy={36}>
+        <div className="flex w-[144px] flex-col overflow-hidden rounded-[12px] border border-stroke2 bg-bg5 text-[14px] text-nav shadow-[0_8px_24px_rgb(21_46_175/0.12)]">
           <button suppressHydrationWarning
             type="button"
             onClick={() => {
               setDraft(recent.find((r) => r.id === menuId) ?? null);
               setMenuId(null);
             }}
-            className="flex cursor-pointer items-center gap-[25px] border-b border-stroke2 px-4 py-3"
+            className="flex h-9 cursor-pointer items-center gap-3 border-b border-stroke2 px-3.5 hover:bg-[rgb(71_215_251/0.2)]"
           >
-            <Icon name="edit" size={22} />
+            <Icon name="edit" size={18} />
             Edit
           </button>
           <button suppressHydrationWarning
@@ -260,9 +260,9 @@ export default function CalculatorPage() {
               setRecent((rs) => rs.filter((r) => r.id !== menuId));
               setMenuId(null);
             }}
-            className="flex cursor-pointer items-center gap-[25px] px-4 py-3"
+            className="flex h-9 cursor-pointer items-center gap-3 px-3.5 hover:bg-[rgb(71_215_251/0.2)]"
           >
-            <Icon name="delete" size={22} />
+            <Icon name="delete" size={18} />
             Delete
           </button>
         </div>
@@ -276,17 +276,17 @@ export default function CalculatorPage() {
             aria-modal
             aria-label="Edit"
             onMouseDown={(e) => e.stopPropagation()}
-            className="flex max-h-[calc(100dvh-32px)] w-[966px] max-w-full flex-col items-end gap-6 overflow-y-auto rounded-[24px] border border-[#1e2834] bg-primary dark:border-stroke2 p-5 font-inter font-medium sm:p-8"
+            className="flex max-h-[calc(100dvh-32px)] w-[720px] max-w-full flex-col items-end gap-5 overflow-y-auto rounded-[20px] border border-[#1e2834] bg-primary dark:border-stroke2 p-5 font-inter font-medium sm:p-6"
           >
             <div className="flex w-full flex-col gap-4">
-              <div className="flex items-start justify-between border-b border-stroke2 pb-8">
-                <h2 className="text-[30px] leading-9 text-black">Edit</h2>
+              <div className="flex items-center justify-between border-b border-stroke2 pb-4">
+                <h2 className="text-[20px] font-semibold text-black">Edit</h2>
                 {/* Figma's close glyph is white (1:8128) */}
-                <button suppressHydrationWarning type="button" aria-label="Close" onClick={() => setDraft(null)} className="cursor-pointer text-white">
-                  <Icon name="close" />
+                <button suppressHydrationWarning type="button" aria-label="Close" onClick={() => setDraft(null)} className="flex size-8 cursor-pointer items-center justify-center rounded-[8px] text-white">
+                  <Icon name="close" size={20} />
                 </button>
               </div>
-              <div className="grid gap-x-2 gap-y-4 sm:grid-cols-2">
+              <div className="grid gap-x-3 gap-y-4 sm:grid-cols-2">
                 <EditField label="Date & Time">
                   <input suppressHydrationWarning value={draft.date} onChange={(e) => set("date")(e.target.value)} placeholder="eg,26 jul 2026, 10:34 pm" className={editInput} />
                 </EditField>
@@ -294,14 +294,14 @@ export default function CalculatorPage() {
                   <input suppressHydrationWarning value={draft.country} onChange={(e) => set("country")(e.target.value)} className={editInput} />
                 </EditField>
               </div>
-              <div className="grid items-center gap-x-2 gap-y-4 sm:grid-cols-3">
+              <div className="grid items-center gap-x-3 gap-y-4 sm:grid-cols-3">
                 <EditField label="Document Type">
                   <SelectField
                     value={draft.doc}
                     options={DOC_TYPES}
                     onChange={set("doc")}
-                    iconClass="m-[3px] rotate-90 text-nav"
-                    className="pr-6 pl-6 text-nav"
+                    iconClass="rotate-90 text-nav"
+                    className="text-nav"
                   />
                 </EditField>
                 <EditField label="Weight">
@@ -315,8 +315,8 @@ export default function CalculatorPage() {
                 <input suppressHydrationWarning value={draft.tariff} onChange={(e) => set("tariff")(e.target.value)} placeholder="eg., ORD-20260..." className={editInput} />
               </EditField>
             </div>
-            <div className="flex gap-[6px] text-[18px]">
-              <button suppressHydrationWarning type="button" onClick={() => setDraft(null)} className="h-[41px] cursor-pointer rounded-[16px] border border-[#00bdd7] bg-white px-[17px] text-black dark:bg-transparent">
+            <div className="flex gap-2 text-[14px]">
+              <button suppressHydrationWarning type="button" onClick={() => setDraft(null)} className="h-10 cursor-pointer rounded-[12px] border border-[#00bdd7] bg-white px-4 text-black dark:bg-transparent">
                 Cancel
               </button>
               <button suppressHydrationWarning
@@ -325,7 +325,7 @@ export default function CalculatorPage() {
                   setRecent((rs) => rs.map((r) => (r.id === draft.id ? draft : r)));
                   setDraft(null);
                 }}
-                className="h-[41px] cursor-pointer rounded-[16px] bg-button px-[18px] text-white"
+                className="h-10 cursor-pointer rounded-[12px] bg-button px-4 text-white"
               >
                 Done
               </button>

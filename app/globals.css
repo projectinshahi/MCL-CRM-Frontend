@@ -87,6 +87,12 @@ body {
   display: none;
 }
 
+/* A table or board wider than the screen scrolls sideways (trackpad, Shift + wheel, touch; the pipeline also by
+   dragging an empty spot), with the scrollbar hidden like everywhere else (owner's choice, 20 Oct 2026). */
+.table-scroll {
+  overflow-x: auto;
+}
+
 /* Figma leading-[normal]: Montserrat metrics (968 + 251) / 1000, text box rounded to whole px */
 @layer base {
   *, ::before, ::after,

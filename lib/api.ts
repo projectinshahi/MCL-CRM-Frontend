@@ -18,7 +18,7 @@ export class ApiError extends Error {
   }
 }
 
-type Query = Record<string, string | number | undefined | null>;
+export type Query = Record<string, string | number | undefined | null>;
 
 export function apiUrl(path: string, query?: Query) {
   const params = new URLSearchParams();
@@ -98,15 +98,20 @@ export function upload<T>(path: string, body: FormData, onProgress?: (percent: n
   });
 }
 
-/** Downloads a file the API streams (e.g. a lead attachment) under its own name; failures are ApiErrors. */
-export async function download(path: string, fileName: string) {
-  const res = await send(apiUrl(path));
+/**
+ * Downloads a file the API streams (a lead attachment, a report) under `fileName`, or the name the API gives it;
+ * resolves to that name. Failures are ApiErrors.
+ */
+export async function download(path: string, fileName?: string, query?: Query) {
+  const res = await send(apiUrl(path, query));
   if (res.status === 401) sessionExpired();
   if (!res.ok) throw await toError(res);
+  const name = fileName ?? /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? "download";
   const url = URL.createObjectURL(await res.blob());
-  const a = Object.assign(document.createElement("a"), { href: url, download: fileName });
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  return name;
 }
 
 // Background list loads report failures to the toast system (registered by FeedbackProvider).

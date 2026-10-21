@@ -8,7 +8,7 @@ import { Field, Spinner, TextInput, ToneIcon } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 
 const btn =
-  "flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-[16px] bg-button text-[18px] font-medium text-white transition-[background-color,transform,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus enabled:hover:bg-secondary enabled:hover:shadow-[0_6px_18px_rgb(21_46_175/0.25)] enabled:active:scale-[0.98] disabled:cursor-wait disabled:opacity-80";
+  "flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-button text-[15px] font-medium text-white transition-[background-color,transform,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus enabled:hover:bg-secondary enabled:hover:shadow-[0_6px_18px_rgb(21_46_175/0.25)] enabled:active:scale-[0.98] disabled:cursor-wait disabled:opacity-80";
 const link = "cursor-pointer rounded-[4px] font-semibold text-link hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 const RESEND_SECONDS = 60; // matches the API's resend cooldown
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -16,8 +16,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function Heading({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <h1 className="text-[28px] font-semibold tracking-[-0.56px] text-black">{title}</h1>
-      <p className="text-[16px] text-muted">{children}</p>
+      <h1 className="text-[24px] font-semibold tracking-[-0.48px] text-black">{title}</h1>
+      <p className="text-[14px] text-muted">{children}</p>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { memo, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type RefObject, type TouchEvent } from "react";
+import { memo, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode, type RefObject, type TouchEvent } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -26,18 +26,20 @@ import {
 import { Icon } from "@/components/Icon";
 import { errorDetail, useRemove, useToast } from "@/components/feedback";
 import { useMe } from "@/components/Shell";
-import { PipelineSkeleton } from "@/components/skeletons";
-import { Badge, IconButton, LoadFailed, Popover } from "@/components/ui";
+import { LANE, PipelineSkeleton } from "@/components/skeletons";
+import { Badge, IconButton, LoadFailed, Popover, StageDot } from "@/components/ui";
 import { ConvertLeadModal } from "@/components/leads/ConvertLead";
 import { EditLeadModal, leadRemoval, type Lead, type Status } from "@/components/leads/LeadModals";
 import { useLeads } from "@/components/leads/LeadsView";
 import { api, ApiError, cap, day, inr, useApi } from "@/lib/api";
 import { place, reconcile, type Column } from "@/lib/pipeline";
 
-const action = "flex items-center rounded-[16px] border-[0.5px] border-stroke2 bg-primary px-2 py-[6px] text-[10px] font-medium tracking-[-0.4px] text-black";
-const label = "w-[39px] text-center";
-const cardBox = "flex flex-col rounded-[16px] border border-stroke2 bg-[#9ce8fb] p-5 dark:bg-[#123847]";
-const titleCls = "min-w-0 text-[16px] font-medium tracking-[-0.64px] break-words text-black";
+const action = "flex h-7 items-center gap-1 rounded-[8px] border border-stroke2 bg-bg5 px-2 text-[12px] font-medium text-black transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const label = "text-center";
+// Cards are neutral surfaces on the column's tint (the saturated cyan made every pill on them hard to read); the
+// stage's colour is on its column header.
+const cardBox = "flex flex-col rounded-[12px] border border-stroke2 bg-primary p-3 shadow-[0_1px_2px_rgb(21_46_175/0.06)] transition-[border-color,box-shadow] hover:border-[#6e85e5] hover:shadow-[0_4px_14px_rgb(21_46_175/0.1)]";
+const titleCls = "min-w-0 text-[14px] leading-[1.3] font-semibold break-words text-black";
 
 type Pipeline = { columns: (Column<Lead> & { status: Status })[] };
 
@@ -111,13 +113,33 @@ function moveFailure(err: unknown, from: Status) {
   return `${errorDetail(err)} The card is back in ${from.name}.`;
 }
 
+/**
+ * The board shows no scrollbar: a mouse scrolls it sideways by dragging an empty spot (as on other boards). A trackpad,
+ * Shift + wheel, touch, keyboard focus and a card dragged to the edge scroll it too.
+ */
+function panBoard(e: PointerEvent<HTMLDivElement>) {
+  const el = e.currentTarget;
+  if (e.pointerType !== "mouse" || e.button !== 0 || el.scrollWidth <= el.clientWidth || (e.target as HTMLElement).closest("article, a, button")) return;
+  e.preventDefault(); // no text selection while panning
+  const x = e.clientX;
+  const left = el.scrollLeft;
+  const move = (m: globalThis.PointerEvent) => (el.scrollLeft = left - (m.clientX - x));
+  const stop = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", stop);
+}
+
 // A card that changes column is a new element; this hands keyboard focus to its grip there.
 let regainFocus: string | null = null;
 const keepFocus = (id: string) => {
   if (document.activeElement?.closest<HTMLElement>("[data-lead]")?.dataset.lead === id) regainFocus = id;
 };
 
-// Leads- Pipeline (Figma 1:6990). Columns are 306px; the board scrolls sideways like the frame crops it.
+// Leads- Pipeline (Figma 1:6990). Columns share the board's width (240-320px each); when the stages don't all fit,
+// the board scrolls sideways (with a visible scrollbar).
 export default function LeadsPipelinePage() {
   const { query, version, refresh } = useLeads();
   const board = useApi<Pipeline>("/leads/pipeline", query, version);
@@ -193,8 +215,8 @@ export default function LeadsPipelinePage() {
 
   return (
     <>
-      <p className="mb-3 text-[12px] font-medium tracking-[-0.48px] text-nav opacity-70">
-        Drag a card to another stage to move it, or use its grip <Icon name="drag" size={12} className="align-[-1px]" /> to pick a stage from a list.
+      <p className="mb-2 text-[12px] font-medium text-nav opacity-70">
+        Drag a card to another stage to move it, or use its grip <Icon name="drag" size={12} className="align-[-1px]" /> to pick a stage from a list. Drag an empty spot to scroll sideways.
       </p>
       <DndContext
         id={dndId}
@@ -206,11 +228,11 @@ export default function LeadsPipelinePage() {
           if (to) void move(leadOf(active), to);
         }}
       >
-        <div className="overflow-x-auto [scrollbar-width:thin]">
+        <div className="table-scroll" onPointerDown={panBoard}>
           {/* Columns share the board's height, so a stage's drop highlight is visible beside any card being dragged. */}
           {!board.data && !board.error && <PipelineSkeleton />}
           {!board.data && board.error && <LoadFailed what="pipeline" onRetry={reload} />}
-          <div className="flex w-max items-stretch gap-3">
+          <div className="flex items-stretch gap-2.5">
             {board.data?.columns.map((column) => (
               <StageColumn key={column.status.id} column={column}>
                 {column.items.map((c) => (
@@ -264,27 +286,29 @@ function StageColumn({ column: { status, count, totalValue, items }, children }:
   return (
     <section
       ref={setNodeRef}
-      className={`flex w-[306px] shrink-0 flex-col gap-[19px] rounded-[16px] border border-[#6e85e5] p-4 outline-offset-2 transition-[background-color,outline-color] ${
-        target ? (isOver ? "bg-bg5 outline-2 outline-focus" : "bg-primary outline-2 outline-[#6e85e5]/40 outline-dashed") : "bg-primary"
+      className={`${LANE} outline-offset-2 transition-[background-color,outline-color] ${
+        target ? (isOver ? "bg-[rgb(71_215_251/0.18)] outline-2 outline-focus" : "bg-bg5 outline-2 outline-[#6e85e5]/50 outline-dashed") : "bg-bg5"
       }`}
     >
-      <header className="flex flex-col gap-2 border-b border-stroke2 pb-3">
-        <div className="flex w-[266px] items-center justify-between">
-          <h2 className="flex items-center gap-3 text-[16px] font-medium tracking-[-0.64px] text-black">
-            <span className="size-[10px] rounded-full bg-button" />
-            {status.name}
+      <header className="flex flex-col gap-0.5 border-b border-stroke2 px-1 pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="flex min-w-0 items-center gap-2 text-[14px] font-semibold text-black">
+            <StageDot status={status} />
+            <span className="truncate" title={status.name}>
+              {status.name}
+            </span>
           </h2>
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-[10px] bg-stroke px-1 text-[10px] leading-none font-medium tracking-[-0.4px] text-black dark:text-bg5">
+          <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full border border-stroke2 bg-primary px-1.5 text-[11px] leading-none font-semibold text-nav" aria-label={`${count} lead${count === 1 ? "" : "s"}`}>
             {count}
           </span>
         </div>
-        <p className="text-[12px] font-medium tracking-[-0.48px] text-nav opacity-70">{inr(totalValue)}</p>
+        <p className="text-[12px] font-medium text-muted">{inr(totalValue)}</p>
       </header>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         {children}
         {!items.length && (
-          <p className={`rounded-[16px] border border-dashed px-4 py-6 text-center text-[14px] text-nav ${target ? "border-[#6e85e5]" : "border-stroke2 opacity-70"}`}>
+          <p className={`rounded-[12px] border border-dashed px-3 py-5 text-center text-[13px] text-nav ${target ? "border-[#6e85e5]" : "border-stroke2 opacity-70"}`}>
             {target ? "Drop here to move the lead to this stage" : "No leads in this stage"}
           </p>
         )}
@@ -294,20 +318,27 @@ function StageColumn({ column: { status, count, totalValue, items }, children }:
   );
 }
 
+// Priority and value, then who owns it, then where it came from and when: the facts a salesperson scans for.
 function CardDetails({ lead: c }: { lead: Lead }) {
   return (
-    <div className="flex flex-col gap-[18px] text-[16px] text-black">
-      <Badge label={cap(c.priority)} width={76} />
-      <p className="font-medium tracking-[-0.64px]">{inr(c.expectedValue)}</p>
-      <div className="flex items-center gap-[43px]">
-        <p className="w-[100px] tracking-[-0.64px]">{c.source?.name ?? "------"}</p>
-        <p className="w-20">{day(c.createdAt)}</p>
+    <div className="flex flex-col gap-1.5 text-[13px] text-nav">
+      <div className="flex items-center justify-between gap-2">
+        <Badge label={cap(c.priority)} width={60} />
+        <p className="text-[14px] font-semibold text-black">{inr(c.expectedValue)}</p>
+      </div>
+      <p className="flex min-w-0 items-center gap-1.5">
+        <Icon name="user-square" size={14} className="shrink-0 text-muted" />
+        <span className="truncate">{c.owner?.name ?? "Unassigned"}</span>
+      </p>
+      <div className="flex items-center justify-between gap-2 text-[12px] text-muted">
+        <span className="truncate">{c.source?.name ?? "No source"}</span>
+        <span className="shrink-0">{day(c.createdAt)}</span>
       </div>
     </div>
   );
 }
 
-const gripCls = "flex size-9 shrink-0 items-center justify-center rounded-[12px] border border-stroke2 bg-bg5";
+const gripCls = "flex size-7 shrink-0 items-center justify-center rounded-[8px] border border-stroke2 bg-bg5";
 
 type CardProps = {
   lead: Lead;
@@ -386,8 +417,8 @@ const CardContents = memo(function CardContents({ lead: c, removing, onEdit, onR
 
   return (
     <>
-      <div className="flex flex-col gap-[22px]">
-        <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-start justify-between gap-2">
           <h3 className={titleCls}>{c.title}</h3>
           <div className="flex shrink-0 items-center gap-1">
             <button
@@ -403,29 +434,29 @@ const CardContents = memo(function CardContents({ lead: c, removing, onEdit, onR
               onClick={() => openMenu(true)}
               className={`${gripCls} cursor-grab transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`}
             >
-              <Icon name="drag" size={18} className="text-nav" />
+              <Icon name="drag" size={16} className="text-nav" />
             </button>
-            <IconButton icon="delete" label="Delete lead" onClick={() => onRemove(c)} disabled={removing} />
+            <IconButton icon="delete" label="Delete lead" onClick={() => onRemove(c)} disabled={removing} className="size-7! rounded-[8px]!" />
           </div>
         </div>
         <CardDetails lead={c} />
       </div>
       <div className="grid grid-rows-[0fr] opacity-0 transition-[grid-template-rows,opacity] group-focus-within:grid-rows-[1fr] group-focus-within:opacity-100 group-hover:grid-rows-[1fr] group-hover:opacity-100">
         <div className="overflow-hidden">
-          <div className="mt-[22px] flex items-center justify-between border-t border-stroke pt-3">
+          <div className="mt-2 flex items-center justify-between gap-1 border-t border-stroke2 pt-2">
             <Link href={`/leads/${c.id}`} className={action}>
-              <Icon name="eye" size={18} className="text-nav" />
+              <Icon name="eye" size={16} className="text-nav" />
               <span className={label}>View</span>
             </Link>
             <button suppressHydrationWarning type="button" onClick={() => onEdit(c)} className={`${action} cursor-pointer`}>
-              <Icon name="edit" size={18} className="text-nav" />
+              <Icon name="edit" size={16} className="text-nav" />
               <span className={label}>Edit</span>
             </button>
             {/* Win: converts the lead into a customer (Leads and Customers access); a converted lead links to it instead */}
             {c.customer && !c.customer.deleted && canConvert ? (
               <Link href={`/customers/${c.customer.id}`} className={action}>
-                <Icon name="converted" size={18} className="text-nav" />
-                <span className="min-w-[39px] px-[2px] text-center">Customer</span>
+                <Icon name="converted" size={16} className="text-nav" />
+                <span className={label}>Customer</span>
               </Link>
             ) : (
               <button
@@ -436,7 +467,7 @@ const CardContents = memo(function CardContents({ lead: c, removing, onEdit, onR
                 onClick={() => onConvert(c)}
                 className={`${action} cursor-pointer disabled:cursor-not-allowed disabled:opacity-50`}
               >
-                <Icon name="arrow-right" size={18} className="text-nav" />
+                <Icon name="arrow-right" size={16} className="text-nav" />
                 <span className={label}>Win</span>
               </button>
             )}
@@ -453,11 +484,11 @@ function LiftedCard() {
   if (!active) return null;
   const c = leadOf(active);
   return (
-    <div aria-hidden className={`${cardBox} cursor-grabbing gap-[22px] shadow-[0_16px_32px_rgb(0_0_0/0.18)]`}>
-      <div className="flex items-center justify-between gap-2">
+    <div aria-hidden className={`${cardBox} cursor-grabbing gap-2 shadow-[0_16px_32px_rgb(0_0_0/0.18)]`}>
+      <div className="flex items-start justify-between gap-2">
         <p className={titleCls}>{c.title}</p>
         <span className={gripCls}>
-          <Icon name="drag" size={18} className="text-nav" />
+          <Icon name="drag" size={16} className="text-nav" />
         </span>
       </div>
       <CardDetails lead={c} />
@@ -485,9 +516,9 @@ function MoveMenu({ anchor, open, lead, stages, onClose, onPick }: {
   };
   const first = stages.find((s) => s.id !== lead.status.id)?.id;
   return (
-    <Popover anchor={anchor} open={open} onClose={onClose} dx={-144} dy={44} backdrop={false}>
-      <div role="menu" aria-label={`Move ${lead.title} to`} onKeyDown={keys} className="flex w-[180px] flex-col overflow-hidden rounded-[9px] border border-stroke2 bg-primary py-1 shadow-[0_8px_24px_rgb(0_0_0/0.12)]">
-        <p aria-hidden className="px-4 pt-2 pb-1 text-[12px] font-medium text-nav opacity-70">
+    <Popover anchor={anchor} open={open} onClose={onClose} dx={-152} dy={32} backdrop={false}>
+      <div role="menu" aria-label={`Move ${lead.title} to`} onKeyDown={keys} className="flex w-[180px] flex-col overflow-hidden rounded-[12px] border border-stroke2 bg-primary py-1 shadow-[0_8px_24px_rgb(0_0_0/0.12)]">
+        <p aria-hidden className="px-3.5 pt-2 pb-1 text-[12px] font-medium text-nav opacity-70">
           Move to stage
         </p>
         {stages.map((s) => {
@@ -501,7 +532,7 @@ function MoveMenu({ anchor, open, lead, stages, onClose, onPick }: {
               autoFocus={s.id === first}
               disabled={here}
               onClick={() => onPick(s)}
-              className="flex h-10 w-full cursor-pointer items-center justify-between px-4 text-left text-[16px] tracking-[-0.32px] text-nav hover:bg-bg5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:text-selected disabled:hover:bg-transparent"
+              className="flex h-9 w-full cursor-pointer items-center justify-between px-3.5 text-left text-[14px] text-nav hover:bg-bg5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:text-selected disabled:hover:bg-transparent"
             >
               {s.name}
               {here && <span className="text-[12px]">Current</span>}

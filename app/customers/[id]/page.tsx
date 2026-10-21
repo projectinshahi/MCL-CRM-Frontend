@@ -6,7 +6,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/Icon";
 import { useConfirm, useToast } from "@/components/feedback";
 import { DetailSkeleton, SkeletonLines } from "@/components/skeletons";
-import { Badge, Field, Spinner } from "@/components/ui";
+import { Badge, Field, Spinner, StageBadge } from "@/components/ui";
 import { ActivityModal, activityLabel, CustomerEditModal, typeLabel, useCustomerStatus, type Customer, type CustomerActivity } from "@/components/customers/CustomerModals";
 import { AttachmentList, AttachmentPicker, type Attachment } from "@/components/leads/Attachments";
 import type { Lead } from "@/components/leads/LeadModals";
@@ -15,10 +15,11 @@ import type { Picked } from "@/lib/attachments";
 import { formatPhone } from "@/lib/phone";
 
 // Same cards and type scale as the lead's page (Leads- Contact, Figma 1:6884).
-const card = "flex min-w-0 flex-col gap-8 rounded-[16px] border border-stroke2 bg-primary px-5 py-8";
-const title = "text-[24px] font-medium text-black sm:text-[28px]";
-const btn = "flex shrink-0 items-center gap-2 rounded-[18px] border border-stroke2 bg-primary px-[17px] py-[13px] text-[16px] font-medium whitespace-nowrap text-nav";
-const small = "flex cursor-pointer items-center gap-2 rounded-[12px] border border-stroke2 bg-bg5 px-3 py-2 text-[14px] font-medium text-nav transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60";
+const card = "flex min-w-0 flex-col gap-5 rounded-[16px] border border-stroke2 bg-primary p-5";
+const title = "text-[18px] font-semibold tracking-[-0.36px] text-black";
+const btn = "flex h-10 shrink-0 items-center gap-2 rounded-[12px] border border-stroke2 bg-primary px-3.5 text-[14px] font-medium whitespace-nowrap text-nav transition-colors hover:bg-bg5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const heading = "text-[20px] font-semibold tracking-[-0.4px] text-black sm:text-[22px]";
+const small = "flex h-9 cursor-pointer items-center gap-2 rounded-[10px] border border-stroke2 bg-bg5 px-3 text-[13px] font-medium text-nav transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60";
 
 type Detail = Customer & { attachments: Attachment[]; leads: Lead[]; hiddenLeads: number };
 type LeadActivity = { id: string; type: string; text: string; actor: { name: string } | null; createdAt: string };
@@ -27,17 +28,17 @@ type LeadActivity = { id: string; type: string; text: string; actor: { name: str
 function Info({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
   const empty = children === null || children === undefined || children === false || children === "";
   return (
-    <div className={`flex min-w-0 flex-col gap-2 font-medium ${className}`}>
-      <p className="text-[16px] tracking-[-0.64px] text-nav opacity-80">{label}</p>
-      <p className={`tracking-[-0.8px] break-words ${empty ? "text-[18px] text-nav opacity-60" : "text-[20px] text-black"}`}>{empty ? "Not provided" : children}</p>
+    <div className={`flex min-w-0 flex-col gap-1 font-medium ${className}`}>
+      <p className="text-[13px] text-nav opacity-80">{label}</p>
+      <p className={`text-[15px] break-words ${empty ? "text-nav opacity-60" : "text-black"}`}>{empty ? "Not provided" : children}</p>
     </div>
   );
 }
 
 function Item({ icon, label, children }: { icon: IconName; label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center gap-4">
-      <Icon name={icon} className="shrink-0 text-nav" />
+    <div className="flex items-center gap-3">
+      <Icon name={icon} size={20} className="shrink-0 text-nav" />
       <Info label={label} className="flex-1">
         {children}
       </Info>
@@ -47,8 +48,8 @@ function Item({ icon, label, children }: { icon: IconName; label: string; childr
 
 function Heading({ icon, children, action }: { icon?: IconName; children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-[14px] border-b border-stroke2 pb-5">
-      {icon && <Icon name={icon} size={26} className="text-nav" />}
+    <div className="flex flex-wrap items-center gap-2.5 border-b border-stroke2 pb-4">
+      {icon && <Icon name={icon} size={20} className="text-nav" />}
       <h2 className={`${title} flex-1`}>{children}</h2>
       {action}
     </div>
@@ -63,7 +64,7 @@ function LeadHistory({ leadId }: { leadId: string }) {
   return (
     <div className="flex flex-col gap-3">
       <button suppressHydrationWarning type="button" aria-expanded={open} aria-controls={panel} onClick={() => setOpen(!open)} className={`${small} w-fit`}>
-        <Icon name="activity" size={18} />
+        <Icon name="activity" size={16} />
         {open ? "Hide lead history" : "Show lead history"}
       </button>
       {open && (
@@ -82,9 +83,9 @@ function LeadHistory({ leadId }: { leadId: string }) {
             </li>
           )}
           {history.data?.items.map((a) => (
-            <li key={a.id} className="flex flex-col gap-[2px]">
-              <span className="text-[16px] font-medium text-black">{a.text}</span>
-              <span className="text-[14px] text-nav opacity-80">
+            <li key={a.id} className="flex flex-col gap-0.5">
+              <span className="text-[14px] font-medium text-black">{a.text}</span>
+              <span className="text-[12px] text-nav opacity-80">
                 {dateTime(a.createdAt)}
                 {a.actor && ` · ${a.actor.name}`}
               </span>
@@ -100,20 +101,20 @@ function LeadHistory({ leadId }: { leadId: string }) {
 function ConvertedLead({ lead: l, original }: { lead: Lead; original: boolean }) {
   const s = l.shipment;
   return (
-    <article className="flex flex-col gap-6 border-b border-stroke2 pb-8 last:border-b-0 last:pb-0">
+    <article className="flex flex-col gap-4 border-b border-stroke2 pb-5 last:border-b-0 last:pb-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           {original && <span className="w-fit rounded-[10px] bg-stroke px-2 py-[2px] text-[12px] font-semibold text-black dark:text-bg5">Original lead</span>}
-          <Link href={`/leads/${l.id}`} className="text-[20px] font-medium break-words text-black hover:text-link hover:underline">
+          <Link href={`/leads/${l.id}`} className="text-[16px] font-semibold break-words text-black hover:text-link hover:underline">
             {l.title}
           </Link>
-          <span className="text-[14px] text-nav opacity-80" title={l.id}>
+          <span className="text-[12px] text-nav opacity-80" title={l.id}>
             Lead ref. {l.id.slice(0, 8)} · created {day(l.createdAt)}
           </span>
         </div>
-        <Badge label={l.status.name} width={88} />
+        <StageBadge status={l.status} width={80} />
       </div>
-      <div className="grid gap-6 sm:grid-cols-3 sm:gap-x-4">
+      <div className="grid gap-4 sm:grid-cols-3 sm:gap-x-4">
         <Info label="Value">{l.expectedValue != null && inr(l.expectedValue)}</Info>
         <Info label="Priority">{cap(l.priority)}</Info>
         <Info label="Converted">{l.convertedAt && day(l.convertedAt)}</Info>
@@ -127,7 +128,7 @@ function ConvertedLead({ lead: l, original }: { lead: Lead; original: boolean })
       </div>
       <Info label="Description">{l.description}</Info>
       <div className="flex flex-col gap-2">
-        <p className="text-[16px] font-medium tracking-[-0.64px] text-nav opacity-80">Lead files</p>
+        <p className="text-[13px] font-medium text-nav opacity-80">Lead files</p>
         <AttachmentList base={`/leads/${l.id}`} items={l.attachments ?? []} />
       </div>
       {original && <LeadHistory leadId={l.id} />}
@@ -195,12 +196,12 @@ function CustomerFiles({ customer: c, onChange }: { customer: Detail; onChange: 
         <AttachmentPicker id={pickerId} items={picked} setItems={setPicked} disabled={progress !== null} />
       </Field>
       {picked.length > 0 && (
-        <button suppressHydrationWarning type="button" onClick={send} disabled={progress !== null} aria-busy={progress !== null} className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-[12px] bg-button px-4 text-[16px] font-medium text-white transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-80">
+        <button suppressHydrationWarning type="button" onClick={send} disabled={progress !== null} aria-busy={progress !== null} className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-[12px] bg-button px-4 text-[14px] font-medium text-white transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-80">
           {progress !== null && <Spinner />}
           {progress === null ? `Upload ${picked.length} file${picked.length === 1 ? "" : "s"}` : progress < 100 ? `Uploading ${progress}%` : "Saving…"}
         </button>
       )}
-      <p className="text-[14px] text-nav opacity-80">Files of the original lead stay with that lead and are listed under it, with the lead’s access rules.</p>
+      <p className="text-[13px] text-nav opacity-80">Files of the original lead stay with that lead and are listed under it, with the lead’s access rules.</p>
     </div>
   );
 }
@@ -214,7 +215,7 @@ function Activities({ customerId, list }: { customerId: string; list: ReturnType
         icon="activity"
         action={
           <button suppressHydrationWarning type="button" onClick={() => setAdding(true)} className={small}>
-            <Icon name="add" size={18} /> Add Activity
+            <Icon name="add" size={16} /> Add Activity
           </button>
         }
       >
@@ -222,24 +223,24 @@ function Activities({ customerId, list }: { customerId: string; list: ReturnType
       </Heading>
       {!list.data && !list.error && <SkeletonLines rows={3} />}
       {list.error && !list.data && (
-        <p className="text-[16px] text-nav">
+        <p className="text-[14px] text-nav">
           Couldn’t load the activities.{" "}
           <button suppressHydrationWarning type="button" onClick={list.reload} className="cursor-pointer font-semibold text-link hover:underline">
             Try again
           </button>
         </p>
       )}
-      {list.data?.items.length === 0 && <p className="text-[16px] text-nav opacity-70">No activities yet. Use Add Activity to record an Initial contact, a Follow Up or a Call.</p>}
+      {list.data?.items.length === 0 && <p className="text-[14px] text-nav opacity-70">No activities yet. Use Add Activity to record an Initial contact, a Follow Up or a Call.</p>}
       {!!list.data?.items.length && (
-        <ol className="flex flex-col gap-6">
+        <ol className="flex flex-col gap-4">
           {list.data.items.map((a) => (
             <li key={a.id} className="flex flex-col gap-1">
-              <p className="flex flex-wrap items-center gap-2 text-[18px] font-medium tracking-[-0.72px] text-black">
-                <span className="rounded-[10px] bg-stroke px-2 py-[2px] text-[12px] font-semibold text-black dark:text-bg5">{activityLabel(a.type)}</span>
+              <p className="flex flex-wrap items-center gap-2 text-[14px] font-medium text-black">
+                <span className="rounded-full bg-stroke px-2 py-0.5 text-[11px] font-semibold text-black dark:text-bg5">{activityLabel(a.type)}</span>
                 {dateTime(a.occurredAt)}
               </p>
-              {a.notes && <p className="text-[16px] break-words whitespace-pre-line text-black">{a.notes}</p>}
-              <p className="text-[14px] text-nav opacity-70">Recorded by {a.actor.name}</p>
+              {a.notes && <p className="text-[14px] break-words whitespace-pre-line text-black">{a.notes}</p>}
+              <p className="text-[12px] text-nav opacity-70">Recorded by {a.actor.name}</p>
             </li>
           ))}
         </ol>
@@ -269,7 +270,7 @@ export default function CustomerDetailPage() {
   if (customer.error && !c)
     return (
       <div className="flex flex-col items-start gap-4 p-4 sm:p-6">
-        <p className="text-[18px] text-nav">{customer.error.status === 404 ? "This customer does not exist or is not assigned to you." : customer.error.message}</p>
+        <p className="text-[15px] text-nav">{customer.error.status === 404 ? "This customer does not exist or is not assigned to you." : customer.error.message}</p>
         <Link href="/customers" className="font-semibold text-link hover:underline">
           Back to customers
         </Link>
@@ -277,10 +278,10 @@ export default function CustomerDetailPage() {
     );
 
   return (
-    <div className="flex flex-col gap-[18px] p-4 sm:p-6">
+    <div className="flex flex-col gap-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/customers" aria-label="Back to customers" className="flex size-[50px] items-center justify-center rounded-full border border-stroke2 bg-primary text-black">
-          <Icon name="arrow-right" size={28} className="rotate-180" />
+        <Link href="/customers" aria-label="Back to customers" className="flex size-10 items-center justify-center rounded-full border border-stroke2 bg-primary text-black transition-colors hover:bg-bg5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+          <Icon name="arrow-right" size={20} className="rotate-180" />
         </Link>
         {c && (
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -290,7 +291,7 @@ export default function CustomerDetailPage() {
               {c.status === "active" ? "Deactivate" : "Activate"}
             </button>
             <button suppressHydrationWarning type="button" onClick={() => setEditing(true)} className={`${btn} cursor-pointer`}>
-              Edit <Icon name="edit" size={18} />
+              Edit <Icon name="edit" size={16} />
             </button>
           </div>
         )}
@@ -298,17 +299,17 @@ export default function CustomerDetailPage() {
 
       {!c && <DetailSkeleton />}
       {c && (
-        <div className="flex flex-col gap-[18px] xl:flex-row xl:items-start">
-          <div className="flex min-w-0 flex-1 flex-col gap-[18px]">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
             <section className={card}>
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stroke2 pb-5">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="text-[16px] font-semibold tracking-[-0.32px] text-selected">{c.code}</span>
-                  <h1 className={`${title} break-words`}>{c.name}</h1>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stroke2 pb-4">
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-[13px] font-semibold text-selected">{c.code}</span>
+                  <h1 className={`${heading} break-words`}>{c.name}</h1>
                 </div>
-                <Badge label={cap(c.status)} width={80} />
+                <Badge label={cap(c.status)} width={70} />
               </div>
-              <div className="grid gap-6 sm:grid-cols-3 sm:gap-x-4">
+              <div className="grid gap-4 sm:grid-cols-3 sm:gap-x-4">
                 <Info label="Customer Type">{typeLabel(c.type)}</Info>
                 <Info label="Source">{c.source?.name}</Info>
                 <Info label="Assigned User">{c.assignee?.name}</Info>
@@ -325,19 +326,19 @@ export default function CustomerDetailPage() {
               {c.leads.map((l) => (
                 <ConvertedLead key={l.id} lead={l} original={l.id === c.leadId} />
               ))}
-              {!c.leads.length && !c.hiddenLeads && <p className="text-[16px] text-nav opacity-70">No leads are linked to this customer.</p>}
+              {!c.leads.length && !c.hiddenLeads && <p className="text-[14px] text-nav opacity-70">No leads are linked to this customer.</p>}
               {c.hiddenLeads > 0 && (
-                <p className="text-[16px] text-nav opacity-70">
+                <p className="text-[14px] text-nav opacity-70">
                   {c.hiddenLeads === 1 ? "1 linked lead isn’t" : `${c.hiddenLeads} linked leads aren’t`} shown: you don’t have access to {c.hiddenLeads === 1 ? "it" : "them"}.
                 </p>
               )}
             </section>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-[18px] xl:w-[382px] xl:shrink-0">
+          <div className="flex min-w-0 flex-col gap-4 xl:w-[340px] xl:shrink-0">
             <section className={card}>
               <Heading>Contact Information</Heading>
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 <Item icon="call" label="Phone Number">
                   {c.phone && formatPhone(c.phone)}
                 </Item>
@@ -354,7 +355,7 @@ export default function CustomerDetailPage() {
             </section>
             <section className={card}>
               <Heading>Company</Heading>
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
                 <Item icon="user-square" label="Company Name">
                   {c.company}
                 </Item>

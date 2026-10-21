@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./Icon";
+import { LABEL_TONE, stageTone, type StatusTone } from "@/lib/status";
 
 // Every <button>/<input>/<textarea>/<select> in the app carries suppressHydrationWarning: browser extensions
 // (password managers, form fillers) stamp attributes such as fdprocessedid onto form controls before React
@@ -35,7 +36,7 @@ export function ToneIcon({ tone, size = 22 }: { tone: Tone; size?: number }) {
 /** Small spinner for pending buttons (static under reduced motion, via the global rule in globals.css). */
 export function Spinner({ className = "" }: { className?: string }) {
   return (
-    <svg aria-hidden viewBox="0 0 24 24" fill="none" className={`size-[18px] shrink-0 animate-spin ${className}`}>
+    <svg aria-hidden viewBox="0 0 24 24" fill="none" className={`size-4 shrink-0 animate-spin ${className}`}>
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
       <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>
@@ -46,7 +47,7 @@ export function Spinner({ className = "" }: { className?: string }) {
 export function FieldError({ id, message }: { id?: string; message?: string }) {
   if (!message) return null;
   return (
-    <span id={id} role="alert" className="flex animate-rise items-center gap-[6px] text-[14px] font-medium text-danger">
+    <span id={id} role="alert" className="flex animate-rise items-center gap-1.5 text-[13px] font-medium text-danger">
       <ToneIcon tone="error" size={16} />
       {message}
     </span>
@@ -56,10 +57,10 @@ export function FieldError({ id, message }: { id?: string; message?: string }) {
 /* ---------- Page header (title / subtitle / action, bottom divider) ---------- */
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex w-full flex-wrap items-center justify-center gap-2 border-b border-stroke2 pb-[23px]">
-      <div className="flex min-w-px flex-1 flex-col gap-1 text-black">
-        <h1 className="text-[26px] font-semibold tracking-[-0.64px] sm:text-[32px]">{title}</h1>
-        <p className="text-[16px] opacity-50">{subtitle}</p>
+    <div className="flex w-full flex-wrap items-center justify-center gap-2 border-b border-stroke2 pb-4">
+      <div className="flex min-w-px flex-1 flex-col gap-0.5 text-black">
+        <h1 className="text-[20px] font-semibold tracking-[-0.4px] sm:text-[24px]">{title}</h1>
+        <p className="text-[14px] opacity-60">{subtitle}</p>
       </div>
       {action}
     </div>
@@ -70,80 +71,110 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 // Figma "Tab select/Button" (blue, plus icon)
 export function PrimaryButton({ children, icon = "add", onClick }: { children: ReactNode; icon?: IconName | null; onClick?: () => void }) {
   return (
-    <button suppressHydrationWarning type="button" onClick={onClick} className="flex shrink-0 cursor-pointer items-center gap-2 rounded-[16px] bg-button px-[18px] py-[14px] text-[18px] leading-6 font-medium whitespace-nowrap text-white">
-      {icon && <Icon name={icon} className="text-white" />}
+    <button suppressHydrationWarning type="button" onClick={onClick} className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-[12px] bg-button px-4 text-[14px] font-medium whitespace-nowrap text-white transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+      {icon && <Icon name={icon} size={20} className="text-white" />}
       {children}
     </button>
   );
 }
 
 // Figma "Button" (Report / Filter): label + trailing 18px icon
-export function ToolButton({ label, icon, onClick, btnRef }: { label: string; icon: IconName; onClick?: () => void; btnRef?: RefObject<HTMLButtonElement | null> }) {
+export function ToolButton({ label, icon, onClick, btnRef, count = 0, busy = false }: {
+  label: string;
+  icon: IconName;
+  onClick?: () => void;
+  btnRef?: RefObject<HTMLButtonElement | null>;
+  count?: number; // e.g. active filters: shown as a small number, and read out with the label
+  busy?: boolean; // a download in progress: a spinner, and no second click
+}) {
   return (
-    <button suppressHydrationWarning ref={btnRef} type="button" onClick={onClick} className="flex shrink-0 cursor-pointer items-center gap-2 rounded-[18px] border border-stroke2 bg-bg5 px-[17px] py-[13px] text-[16px] leading-5 font-medium whitespace-nowrap text-nav">
+    <button
+      suppressHydrationWarning
+      ref={btnRef}
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      aria-busy={busy || undefined}
+      aria-label={count ? `${label}, ${count} active` : undefined}
+      className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-[12px] border border-stroke2 bg-bg5 px-3.5 text-[14px] font-medium whitespace-nowrap text-nav transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-70"
+    >
       {label}
-      <Icon name={icon} size={18} />
+      {count > 0 && <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-button px-1 text-[11px] leading-none font-semibold text-white">{count}</span>}
+      {busy ? <Spinner /> : <Icon name={icon} size={16} />}
     </button>
   );
 }
 
-export function SearchBox({ value, onChange, className = "sm:w-[314px]" }: { value: string; onChange: (v: string) => void; className?: string }) {
+export function SearchBox({ value, onChange, className = "sm:w-[260px]" }: { value: string; onChange: (v: string) => void; className?: string }) {
   return (
-    <label className={`flex w-full items-center gap-2 rounded-[18px] border border-stroke2 bg-bg5 px-[17px] py-[13px] ${className}`}>
-      <Icon name="search" size={18} className="text-nav" />
+    <label className={`flex h-10 w-full items-center gap-2 rounded-[12px] border border-stroke2 bg-bg5 px-3.5 transition-[border-color,box-shadow] focus-within:border-stroke focus-within:shadow-[0_0_0_3px_rgb(71_215_251/0.25)] ${className}`}>
+      <Icon name="search" size={16} className="text-nav" />
       <input suppressHydrationWarning
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search..."
-        className="w-full min-w-0 bg-transparent text-[16px] leading-[20px] font-medium text-nav outline-none placeholder:text-nav"
+        className="w-full min-w-0 bg-transparent text-[14px] leading-5 font-medium text-nav outline-none placeholder:text-nav/70"
       />
     </label>
   );
 }
 
+/** A table column `w` px wide at least, sharing any spare width in proportion, so a row always fills its card. */
+export const col = (w: number) => ({ flex: `${w} 0 0`, minWidth: w });
+
 // Square icon button used in table "Actions"
 export function IconButton({ icon, label, onClick, className = "", disabled = false }: { icon: IconName; label: string; onClick?: () => void; className?: string; disabled?: boolean }) {
   return (
-    <button suppressHydrationWarning type="button" aria-label={label} onClick={onClick} disabled={disabled} aria-busy={disabled || undefined} className={`flex h-9 w-[46px] shrink-0 cursor-pointer items-center justify-center rounded-[12px] border border-stroke2 bg-bg5 transition-[background-color,opacity] hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-50 ${className}`}>
-      {disabled ? <Spinner className="text-nav" /> : <Icon name={icon} size={18} className="text-nav" />}
+    <button suppressHydrationWarning type="button" aria-label={label} onClick={onClick} disabled={disabled} aria-busy={disabled || undefined} className={`flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-stroke2 bg-bg5 transition-[background-color,opacity] hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-50 ${className}`}>
+      {disabled ? <Spinner className="text-nav" /> : <Icon name={icon} size={16} className="text-nav" />}
     </button>
   );
 }
 
 /* ---------- Status pills (Figma variant sets 1:7125, 1:7138, 1:7992, 1:7797) ---------- */
-const BADGE: Record<string, [bg: string, border: string, text: string]> = {
-  New: ["rgb(140 182 255/.3)", "rgb(140 182 255/.5)", "#8cb6ff"],
-  Contacted: ["rgb(103 111 246/.3)", "rgb(103 111 246/.5)", "#676ff6"],
-  Interested: ["rgb(101 238 136/.3)", "rgb(48 175 80/.5)", "#30a74e"],
-  Proposal: ["rgb(251 146 60/.3)", "rgb(251 146 60/.5)", "#fb923c"],
-  Converted: ["rgb(229 0 241/.3)", "rgb(229 0 241/.5)", "#e500f1"],
-  Lost: ["rgb(249 74 74/.3)", "rgb(255 15 0/.5)", "#f94a4a"],
-  Low: ["rgb(101 238 136/.3)", "rgb(48 175 80/.5)", "#30a74e"],
-  Medium: ["rgb(255 136 0/.2)", "rgb(255 136 0/.5)", "#f80"],
-  High: ["rgb(249 74 74/.2)", "rgb(249 74 74/.5)", "#f94a4a"],
-  Pending: ["rgb(255 136 0/.3)", "rgb(255 136 0/.5)", "#f80"],
-  Completed: ["rgb(101 238 136/.3)", "rgb(48 175 80/.5)", "#30a74e"],
-  Overdue: ["rgb(249 74 74/.3)", "rgb(249 74 74/.5)", "#f80"],
-  Active: ["rgb(101 238 136/.2)", "rgb(48 167 78/.5)", "#4ade80"],
-  Inactive: ["rgb(249 74 74/.2)", "rgb(249 74 74/.5)", "#f94a4a"],
+// Tones come from lib/status.ts (meaning → colour). Dark text on a light tint, light text on a dark tint in dark mode:
+// at least 4.5:1 in both. The Figma pills used the colour itself for the text (#8cb6ff on light blue ≈ 2:1).
+const TONE: Record<StatusTone, { pill: string; dot: string }> = {
+  sky: { pill: "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-200", dot: "bg-sky-500" },
+  indigo: { pill: "border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-200", dot: "bg-indigo-500" },
+  teal: { pill: "border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-200", dot: "bg-teal-500" },
+  violet: { pill: "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-200", dot: "bg-violet-500" },
+  cyan: { pill: "border-cyan-200 bg-cyan-50 text-cyan-800 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-200", dot: "bg-cyan-500" },
+  pink: { pill: "border-pink-200 bg-pink-50 text-pink-800 dark:border-pink-400/30 dark:bg-pink-400/10 dark:text-pink-200", dot: "bg-pink-500" },
+  orange: { pill: "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-400/30 dark:bg-orange-400/10 dark:text-orange-200", dot: "bg-orange-500" },
+  lime: { pill: "border-lime-300 bg-lime-50 text-lime-800 dark:border-lime-400/30 dark:bg-lime-400/10 dark:text-lime-200", dot: "bg-lime-500" },
+  green: { pill: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200", dot: "bg-emerald-500" },
+  red: { pill: "border-red-200 bg-red-50 text-red-800 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-200", dot: "bg-red-500" },
+  amber: { pill: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200", dot: "bg-amber-500" },
+  slate: { pill: "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-400/30 dark:bg-slate-400/10 dark:text-slate-200", dot: "bg-slate-400" },
 };
 
-export function Badge({ label, width, className = "" }: { label: string; width?: number; className?: string }) {
-  const [bg, border, color] = BADGE[label] ?? BADGE.New;
+/** A status pill: priorities and states by their label (lib/status.ts LABEL_TONE), or an explicit tone. */
+export function Badge({ label, tone, width, className = "" }: { label: string; tone?: StatusTone; width?: number; className?: string }) {
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-[19px] border px-[7px] py-[3px] text-[14px] leading-[17px] whitespace-nowrap ${className}`}
-      style={{ background: bg, borderColor: border, color, width }}
+      className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-[12px] leading-4 font-medium whitespace-nowrap ${TONE[tone ?? LABEL_TONE[label] ?? "slate"].pill} ${className}`}
+      style={{ minWidth: width }}
     >
       {label}
     </span>
   );
 }
 
+/** A lead stage: coloured by what it means (won green, lost red, the rest fixed hues), the same on every screen. */
+export function StageBadge({ status, width, className }: { status: { name: string; isWon?: boolean; isLost?: boolean }; width?: number; className?: string }) {
+  return <Badge label={status.name} tone={stageTone(status)} width={width} className={className} />;
+}
+
+/** The stage's colour as a small dot (pipeline column headers). */
+export function StageDot({ status }: { status: { name: string; isWon?: boolean; isLost?: boolean } }) {
+  return <span aria-hidden className={`size-2 shrink-0 rounded-full ${TONE[stageTone(status)].dot}`} />;
+}
+
 /* ---------- Empty and failed states for tables and lists (loading: components/skeletons.tsx) ---------- */
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <p role="status" className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-stroke2 py-10 text-center text-[16px] text-muted">
+    <p role="status" className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-stroke2 py-8 text-center text-[14px] text-muted">
       {children}
     </p>
   );
@@ -169,7 +200,7 @@ export function Pagination({ label, pages = 4, page: current, onPage }: { label:
   const go = (p: number) => (onPage ?? setLocal)(Math.min(Math.max(1, p), pages));
   const first = Math.max(1, Math.min(page - 2, pages - 4));
   return (
-    <div className="flex w-full flex-wrap items-center justify-between gap-3 py-5">
+    <div className="flex w-full flex-wrap items-center justify-between gap-3 py-4">
       <p className="text-[12px] text-muted">{label}</p>
       <div className="flex items-center gap-[6px]">
         {Array.from({ length: Math.min(5, pages) }, (_, i) => first + i).map((n) => (
@@ -178,13 +209,13 @@ export function Pagination({ label, pages = 4, page: current, onPage }: { label:
             type="button"
             aria-current={n === page ? "page" : undefined}
             onClick={() => go(n)}
-            className={`flex h-8 cursor-pointer items-center justify-center rounded-[4px] px-3 text-[14px] ${n === page ? "bg-stroke text-white" : "text-muted"}`}
+            className={`flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-[8px] px-2.5 text-[13px] font-medium ${n === page ? "bg-stroke text-white" : "text-muted hover:bg-bg5"}`}
           >
             {n}
           </button>
         ))}
-        <button suppressHydrationWarning type="button" aria-label="Next page" onClick={() => go(page + 1)} disabled={page >= pages} className="cursor-pointer text-nav disabled:cursor-default disabled:opacity-30">
-          <Icon name="arrow-right" />
+        <button suppressHydrationWarning type="button" aria-label="Next page" onClick={() => go(page + 1)} disabled={page >= pages} className="flex size-8 cursor-pointer items-center justify-center rounded-[8px] text-nav hover:bg-bg5 disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent">
+          <Icon name="arrow-right" size={20} />
         </button>
       </div>
     </div>
@@ -235,7 +266,7 @@ function useFocusReturn(open: boolean, box: RefObject<HTMLElement | null>, first
 }
 
 // Figma overlay: CENTER (or TOP_CENTER), black 50% backdrop, close on click outside, instant.
-export function Modal({ open, onClose, title, children, className = "w-[700px]", top = false }: {
+export function Modal({ open, onClose, title, children, className = "w-[560px]", top = false }: {
   open: boolean;
   onClose: () => void;
   title: string;
@@ -274,21 +305,21 @@ export function Modal({ open, onClose, title, children, className = "w-[700px]",
         tabIndex={-1}
         onKeyDown={keepFocusInside}
         onMouseDown={(e) => e.stopPropagation()}
-        className={`relative flex max-h-[calc(100dvh-32px)] max-w-full flex-col gap-6 overflow-y-auto rounded-[24px] border border-stroke2 bg-primary p-5 outline-none sm:p-8 ${className}`}
+        className={`relative flex max-h-[calc(100dvh-32px)] max-w-full flex-col gap-5 overflow-y-auto rounded-[20px] border border-stroke2 bg-primary p-5 outline-none sm:p-6 ${className}`}
       >
-        <div className="flex w-full items-start border-b border-stroke2 pr-8 pb-8">
-          <h2 className="text-[22px] font-medium text-black sm:text-[28px]">{title}</h2>
+        {/* Pinned while a long form scrolls under it (the close button with it); ModalActions is pinned at the bottom. */}
+        <div className="sticky -top-5 z-10 -mx-5 -mt-5 flex w-auto items-center justify-between gap-4 border-b border-stroke2 bg-primary px-5 py-4 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6">
+          <h2 className="min-w-0 text-[18px] font-semibold tracking-[-0.36px] break-words text-black sm:text-[20px]">{title}</h2>
+          <button
+            suppressHydrationWarning
+            type="button"
+            aria-label={`Close ${title.replace(/[?.!:]+$/, "").toLowerCase()} dialog`} // "Delete lead?" → "Close delete lead dialog"
+            onClick={onClose}
+            className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] text-black transition-colors hover:bg-bg5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          >
+            <Icon name="close" size={20} />
+          </button>
         </div>
-        {/* Figma close control: 24px, centred 47px from the right / 45px from the top of every overlay */}
-        <button
-          suppressHydrationWarning
-          type="button"
-          aria-label={`Close ${title.replace(/[?.!:]+$/, "").toLowerCase()} dialog`} // "Delete lead?" → "Close delete lead dialog"
-          onClick={onClose}
-          className="absolute top-[33px] right-[35px] cursor-pointer rounded-[6px] text-black transition-opacity hover:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
-          <Icon name="close" />
-        </button>
         {children}
       </div>
     </div>
@@ -303,8 +334,9 @@ export function ModalActions({ onCancel, onDone, doneLabel = "Done", pending = f
   pendingLabel?: string;
 }) {
   return (
-    <div className="flex items-center justify-end gap-[6px]">
-      <button suppressHydrationWarning type="button" onClick={onCancel} className="h-10 cursor-pointer rounded-[12px] border border-button bg-white px-4 dark:bg-transparent text-[16px] font-medium text-black transition-colors hover:bg-bg5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+    // Pinned to the bottom of a dialog whose form scrolls, so Save / Cancel never scroll out of reach.
+    <div className="sticky -bottom-5 z-10 -mx-5 flex items-center justify-end gap-2 border-t border-stroke2 bg-primary px-5 py-4 sm:-bottom-6 sm:-mx-6 sm:px-6">
+      <button suppressHydrationWarning type="button" onClick={onCancel} className="h-10 cursor-pointer rounded-[12px] border border-button bg-white px-4 dark:bg-transparent text-[14px] font-medium text-black transition-colors hover:bg-bg5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
         Cancel
       </button>
       <button
@@ -313,7 +345,7 @@ export function ModalActions({ onCancel, onDone, doneLabel = "Done", pending = f
         onClick={onDone}
         disabled={pending}
         aria-busy={pending}
-        className="flex h-10 cursor-pointer items-center gap-2 rounded-[12px] bg-button px-4 text-[16px] font-medium text-white transition-[background-color,transform] hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-[0.98] disabled:cursor-wait disabled:opacity-80"
+        className="flex h-10 cursor-pointer items-center gap-2 rounded-[12px] bg-button px-4 text-[14px] font-medium text-white transition-[background-color,transform] hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus active:scale-[0.98] disabled:cursor-wait disabled:opacity-80"
       >
         {pending && <Spinner />}
         {pending ? pendingLabel : doneLabel}
@@ -349,15 +381,18 @@ export function Popover({ anchor, open, onClose, dx = 0, dy = 0, backdrop = true
     const r = el && anchor.current?.getBoundingClientRect();
     if (!el || !r) return;
     el.style.left = `${Math.max(8, Math.min(r.left + dx, window.innerWidth - el.offsetWidth - 8))}px`;
-    const top = r.top + dy;
-    el.style.top = `${top}px`;
-    // A long list (e.g. many roles) scrolls inside the panel instead of running off the bottom of the screen.
-    // ponytail: never flips above the trigger; add that if a dropdown ever sits in the bottom ~160px.
-    const room = window.innerHeight - top - 8;
+    // Below the trigger, or above it when it doesn't fit below and there is more room above (a dropdown near the
+    // bottom of the screen or of a dialog). Whatever doesn't fit either way scrolls inside the panel.
+    const gap = Math.max(0, dy - r.height);
+    const below = window.innerHeight - (r.top + dy) - 8;
+    const above = r.top - gap - 8;
+    const up = el.offsetHeight > below && above > below;
+    const room = up ? above : below;
     if (el.offsetHeight > room) {
-      el.style.maxHeight = `${Math.max(room, 160)}px`;
+      el.style.maxHeight = `${Math.max(room, 120)}px`;
       el.style.overflowY = "auto";
     }
+    el.style.top = `${up ? Math.max(8, r.top - gap - Math.min(el.offsetHeight, room)) : r.top + dy}px`;
   };
   // Portal to <body>: keeps the overlay out of any ancestor <label> (whose activation would
   // re-click the trigger) and out of scroll/stacking contexts such as modal bodies.
@@ -390,36 +425,51 @@ export function Popover({ anchor, open, onClose, dx = 0, dy = 0, backdrop = true
 /* ---------- Filter dropdown (Figma 1:7751 collapsed / 1:7770 expanded): Leads, Customers, Follow-ups ---------- */
 // A group opens its options; picking an option applies it, picking it again clears it.
 export type FilterGroup = { key: string; label: string; options: { value: string; label: string }[] };
-// Figma rows: 40 + 0.5px divider (Chrome draws the 0.5px border as 1px, so the height is fixed instead of padded)
+// 36px rows (the compact control height) with a 0.5px divider
 const filterRow =
-  "flex h-[40.5px] w-full cursor-pointer items-center px-4 text-left text-[16px] tracking-[-0.32px] text-nav last:h-10 focus-visible:bg-bg5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus";
+  "flex h-9 w-full cursor-pointer items-center px-3.5 text-left text-[14px] text-nav focus-visible:bg-bg5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus";
 
-export function FilterMenu({ groups, value, onPick }: { groups: FilterGroup[]; value: Record<string, string>; onPick: (key: string, value: string) => void }) {
+/** How many of `value`'s filters are set: the number on the Filter button. */
+export const activeFilters = (value: object) => Object.values(value).filter(Boolean).length;
+
+export function FilterMenu({ groups, value, onPick }: { groups: FilterGroup[]; value: Record<string, string | undefined>; onPick: (key: string, value: string) => void }) {
   const [open, setOpen] = useState<string | null>(groups.length === 1 ? groups[0].key : null);
+  const chosen = groups.filter((g) => value[g.key]);
   return (
-    <div className="flex w-[142px] flex-col divide-y-[0.5px] divide-stroke2 overflow-hidden rounded-[9px] border border-stroke2 bg-primary">
-      {groups.map(({ key, label, options }) => [
-        <button suppressHydrationWarning key={key} type="button" aria-expanded={open === key} onClick={() => setOpen(open === key ? null : key)} className={filterRow}>
-          <span className="flex w-[94px] items-center justify-between">
-            {label}
-            <Icon name="arrow-right" size={18} className="rotate-90" />
-          </span>
-        </button>,
-        ...(open === key
-          ? options.map((o) => (
-              <button
-                suppressHydrationWarning
-                key={`${key}:${o.value}`}
-                type="button"
-                aria-pressed={value[key] === o.value}
-                onClick={() => onPick(key, value[key] === o.value ? "" : o.value)}
-                className={`${filterRow} ${value[key] === o.value ? "text-selected" : ""}`}
-              >
-                {o.label}
-              </button>
-            ))
-          : []),
-      ])}
+    <div className="flex w-[220px] flex-col divide-y-[0.5px] divide-stroke2 overflow-hidden rounded-[12px] border border-stroke2 bg-primary shadow-[0_8px_24px_rgb(21_46_175/0.12)]">
+      {groups.map(({ key, label, options }) => {
+        // Each group says what is chosen in it, so the menu reads as the current filter at a glance.
+        const current = options.find((o) => o.value === value[key])?.label;
+        return [
+          <button suppressHydrationWarning key={key} type="button" aria-expanded={open === key} onClick={() => setOpen(open === key ? null : key)} className={`${filterRow} h-auto! min-h-9 justify-between gap-2 py-1.5 font-medium`}>
+            <span className="flex min-w-0 flex-col">
+              {label}
+              {current && <span className="truncate text-[12px] font-normal text-selected">{current}</span>}
+            </span>
+            <Icon name="arrow-right" size={16} className={`shrink-0 transition-transform ${open === key ? "-rotate-90" : "rotate-90"}`} />
+          </button>,
+          ...(open === key
+            ? options.map((o) => (
+                <button
+                  suppressHydrationWarning
+                  key={`${key}:${o.value}`}
+                  type="button"
+                  aria-pressed={value[key] === o.value}
+                  onClick={() => onPick(key, value[key] === o.value ? "" : o.value)}
+                  className={`${filterRow} h-auto! min-h-9 justify-between gap-2 bg-bg5/60 py-1.5 pl-6 hover:bg-bg5 ${value[key] === o.value ? "font-semibold text-selected" : ""}`}
+                >
+                  <span className="min-w-0 break-words">{o.label}</span>
+                  {value[key] === o.value && <Icon name="mark" size={16} className="shrink-0 text-selected" />}
+                </button>
+              ))
+            : []),
+        ];
+      })}
+      {chosen.length > 0 && (
+        <button suppressHydrationWarning type="button" onClick={() => chosen.forEach((g) => onPick(g.key, ""))} className={`${filterRow} font-semibold text-link`}>
+          Clear all filters
+        </button>
+      )}
     </div>
   );
 }
@@ -427,7 +477,7 @@ export function FilterMenu({ groups, value, onPick }: { groups: FilterGroup[]; v
 /* ---------- Form fields (modal forms) ---------- */
 export function Field({ label, children, className = "", error, htmlFor, required = false }: { label: string; children: ReactNode; className?: string; error?: string; htmlFor?: string; required?: boolean }) {
   const text = (
-    <span className="text-[18px] font-medium text-black sm:text-[20px]">
+    <span className={FIELD_LABEL}>
       {label}
       {required && <RequiredMark />}
     </span>
@@ -438,7 +488,7 @@ export function Field({ label, children, className = "", error, htmlFor, require
     <div className={`flex w-full min-w-0 flex-col gap-[6px] ${className}`}>
       {htmlFor ? (
         <>
-          <label htmlFor={htmlFor} className="w-fit">
+          <label htmlFor={htmlFor} className="flex w-fit">
             {text}
           </label>
           {children}
@@ -454,6 +504,9 @@ export function Field({ label, children, className = "", error, htmlFor, require
   );
 }
 
+/** A form field's label text: one size in every form (Field, the user and role forms, the file lists). */
+export const FIELD_LABEL = "text-[14px] font-medium text-black";
+
 /** The asterisk after a required field's label. Screen readers get aria-required on the input instead. */
 export const RequiredMark = () => (
   <span aria-hidden className="ml-1 text-danger">
@@ -462,21 +515,21 @@ export const RequiredMark = () => (
 );
 
 const inputCls =
-  "min-h-[46px] w-full rounded-[16px] border border-stroke2 bg-bg5 px-6 py-[12px] text-[16px] leading-5 font-medium text-black outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-black/50 focus:border-stroke focus:shadow-[0_0_0_3px_rgb(71_215_251/0.25)] aria-invalid:border-danger aria-invalid:focus:shadow-[0_0_0_3px_rgb(249_74_74/0.18)]";
+  "min-h-10 w-full rounded-[12px] border border-stroke2 bg-bg5 px-3.5 py-[9px] text-[14px] leading-5 font-medium text-black outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-black/50 focus:border-stroke focus:shadow-[0_0_0_3px_rgb(71_215_251/0.25)] aria-invalid:border-danger aria-invalid:focus:shadow-[0_0_0_3px_rgb(249_74_74/0.18)]";
 
 export function TextInput(props: React.ComponentProps<"input">) {
   return <input suppressHydrationWarning {...props} className={`${inputCls} ${props.className ?? ""}`} />;
 }
 
 export function TextArea(props: React.ComponentProps<"textarea">) {
-  return <textarea suppressHydrationWarning {...props} className={`${inputCls} h-[86px] resize-none ${props.className ?? ""}`} />;
+  return <textarea suppressHydrationWarning {...props} className={`${inputCls} h-20 resize-none ${props.className ?? ""}`} />;
 }
 
 // Dropdown field: input-styled trigger + designed option list (Figma 1:7760 / 1:7751 style). Options are plain
 // strings, or { value, label } when labels can repeat (two leads or users with the same name): those are told apart
 // by value, never by label. `display` overrides the trigger's text (e.g. while the options are still loading).
 // With `onSearch` the list gets a search box, for lists too long to send whole (the caller fetches the matches).
-export function SelectField({ value, options, onChange, placeholder, display, search, onSearch, icon = "arrow-right", iconSize = 18, iconClass = "rotate-90 text-black", className = "", invalid = false }: {
+export function SelectField({ value, options, onChange, placeholder, display, search, onSearch, icon = "arrow-right", iconSize = 16, iconClass = "rotate-90 text-black", className = "", invalid = false }: {
   value: string;
   options: (string | { value: string; label: string })[];
   onChange: (v: string) => void;
@@ -495,6 +548,14 @@ export function SelectField({ value, options, onChange, placeholder, display, se
   const [width, setWidth] = useState(0);
   const items = options.map((o) => (typeof o === "string" ? { value: o, label: o } : o));
   const shown = display ?? items.find((o) => o.value === value)?.label ?? value;
+  const moveFocus = (e: React.KeyboardEvent<HTMLElement>) => {
+    const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>("button")];
+    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const to = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: buttons.length - 1 }[e.key];
+    if (to === undefined || !buttons.length) return;
+    e.preventDefault();
+    buttons[Math.max(0, Math.min(buttons.length - 1, to))]!.focus();
+  };
   return (
     <>
       <button suppressHydrationWarning
@@ -510,8 +571,8 @@ export function SelectField({ value, options, onChange, placeholder, display, se
         <span className={shown ? "" : "opacity-50"}>{shown || placeholder}</span>
         <Icon name={icon} size={iconSize} className={iconClass} />
       </button>
-      <Popover anchor={ref} open={open} onClose={() => setOpen(false)} dy={50}>
-        <div className="overflow-hidden rounded-[9px] border border-stroke2 bg-primary" style={{ width }}>
+      <Popover anchor={ref} open={open} onClose={() => setOpen(false)} dy={44}>
+        <div className="overflow-hidden rounded-[12px] border border-stroke2 bg-primary shadow-[0_8px_24px_rgb(21_46_175/0.12)]" style={{ width }}>
           {onSearch && (
             <input
               suppressHydrationWarning
@@ -520,26 +581,41 @@ export function SelectField({ value, options, onChange, placeholder, display, se
               placeholder="Search…"
               value={search ?? ""}
               onChange={(e) => onSearch(e.target.value)}
-              className="w-full border-b-[0.5px] border-stroke2 bg-bg5 px-4 py-[10px] text-[16px] tracking-[-0.32px] text-black outline-none placeholder:text-black/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+              onKeyDown={(e) => {
+                if (e.key !== "ArrowDown") return;
+                e.preventDefault();
+                e.currentTarget.parentElement?.querySelector<HTMLButtonElement>("[role=option]")?.focus();
+              }}
+              className="w-full border-b-[0.5px] border-stroke2 bg-bg5 px-3.5 py-2 text-[14px] text-black outline-none placeholder:text-black/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
             />
           )}
-          <ul>
-            {items.map((o) => (
-              <li key={o.value}>
-                <button suppressHydrationWarning
-                  type="button"
-                  onClick={() => {
-                    onChange(o.value);
-                    setOpen(false);
-                  }}
-                  className="w-full cursor-pointer border-b-[0.5px] border-stroke2 px-4 py-[10px] text-left text-[16px] tracking-[-0.32px] text-nav last:border-b-0 hover:bg-bg5 focus-visible:bg-bg5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
-                >
-                  {o.label}
-                </button>
-              </li>
-            ))}
+          {/* A listbox: Up/Down/Home/End move between options, Enter or Space picks, Escape closes; the chosen one is
+              marked and takes focus when the list opens (with a search box, typing comes first). */}
+          <ul role="listbox" aria-label={placeholder ?? "Options"} onKeyDown={moveFocus}>
+            {items.map((o) => {
+              const chosen = o.value === value;
+              return (
+                <li key={o.value} role="none">
+                  <button
+                    suppressHydrationWarning
+                    type="button"
+                    role="option"
+                    aria-selected={chosen}
+                    autoFocus={chosen && !onSearch}
+                    onClick={() => {
+                      onChange(o.value);
+                      setOpen(false);
+                    }}
+                    className={`flex min-h-9 w-full cursor-pointer items-center justify-between gap-2 border-b-[0.5px] border-stroke2 px-3.5 py-2 text-left text-[14px] last:border-b-0 hover:bg-bg5 focus-visible:bg-bg5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus ${chosen ? "font-semibold text-selected" : "text-nav"}`}
+                  >
+                    <span className="min-w-0 break-words">{o.label}</span>
+                    {chosen && <Icon name="mark" size={16} className="shrink-0 text-selected" />}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
-          {onSearch && !items.length && <p className="px-4 py-[10px] text-[14px] text-nav opacity-70">No matches</p>}
+          {onSearch && !items.length && <p className="px-3.5 py-2 text-[13px] text-nav opacity-70">No matches</p>}
         </div>
       </Popover>
     </>

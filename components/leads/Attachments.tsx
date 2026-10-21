@@ -17,7 +17,7 @@ export type Attachment = {
   uploadedBy?: { id: string; name: string }; // customer files say who added them
 };
 
-const row = "flex items-center gap-3 rounded-[16px] border border-stroke2 bg-bg5 px-4 py-3";
+const row = "flex items-center gap-2.5 rounded-[12px] border border-stroke2 bg-bg5 px-3 py-2";
 
 /**
  * Files chosen for a new lead (Figma "Attach Files" box): click or drop to add, see each file's size (and what
@@ -65,7 +65,7 @@ export function AttachmentPicker({ id, items, setItems, disabled }: { id: string
           add(e.dataTransfer.files);
         }}
         data-over={over || undefined}
-        className={`flex flex-col items-center gap-[10px] rounded-[16px] border border-dashed border-nav/30 bg-bg5 px-6 py-8 text-center text-[16px] font-medium text-black transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus data-over:border-button data-over:bg-[rgb(71_215_251/0.12)] ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-button"}`}
+        className={`flex flex-col items-center gap-1.5 rounded-[12px] border border-dashed border-nav/30 bg-bg5 px-5 py-5 text-center text-[14px] font-medium text-black transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus data-over:border-button data-over:bg-[rgb(71_215_251/0.12)] ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-button"}`}
       >
         <input
           suppressHydrationWarning
@@ -84,13 +84,13 @@ export function AttachmentPicker({ id, items, setItems, disabled }: { id: string
         <span>
           Drop files here or <span className="text-link underline">browse</span>
         </span>
-        <span className="text-[14px] font-normal text-nav">
+        <span className="text-[12px] font-normal text-nav">
           PDF, Word, Excel, JPG, PNG, WEBP or HEIC · up to {MAX_FILES} files, {MAX_FILE_BYTES / 1024 / 1024} MB each
         </span>
-        <Icon name="add-circle" className="text-nav" />
+        <Icon name="add-circle" size={20} className="text-nav" />
       </label>
       {note && (
-        <p role="status" className="text-[14px] text-nav">
+        <p role="status" className="text-[13px] text-nav">
           {note}
         </p>
       )}
@@ -98,12 +98,12 @@ export function AttachmentPicker({ id, items, setItems, disabled }: { id: string
         <ul aria-label="Files to attach" className="flex flex-col gap-2">
           {items.map((i) => (
             <li key={i.key} data-error={i.error ? true : undefined} className={`${row} data-error:border-danger`}>
-              <Icon name="note" size={20} className="shrink-0 text-nav" />
+              <Icon name="note" size={18} className="shrink-0 text-nav" />
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-[16px] font-medium text-black" title={i.file.name}>
+                <span className="truncate text-[14px] font-medium text-black" title={i.file.name}>
                   {i.file.name}
                 </span>
-                <span className={`text-[14px] ${i.error ? "text-danger" : "text-nav"}`}>
+                <span className={`text-[12px] ${i.error ? "text-danger" : "text-nav"}`}>
                   {i.error ??
                     (i.preparing ? "Compressing…" : i.originalSize ? `${formatBytes(i.originalSize)} → ${formatBytes(i.file.size)}, compressed` : formatBytes(i.file.size))}
                 </span>
@@ -134,17 +134,17 @@ export function AttachmentPicker({ id, items, setItems, disabled }: { id: string
 export function AttachmentList({ base, items, onRemove, removing }: { base: string; items: Attachment[]; onRemove?: (a: Attachment) => void; removing?: string | null }) {
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
-  if (!items.length) return <p className="text-[16px] text-nav opacity-70">No files attached.</p>;
+  if (!items.length) return <p className="text-[14px] text-nav opacity-70">No files attached.</p>;
   return (
     <ul aria-label="Attached files" className="flex flex-col gap-2">
       {items.map((a) => (
         <li key={a.id} className={row}>
-          <Icon name="note" size={20} className="shrink-0 text-nav" />
+          <Icon name="note" size={18} className="shrink-0 text-nav" />
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-[16px] font-medium text-black" title={a.fileName}>
+            <span className="truncate text-[14px] font-medium text-black" title={a.fileName}>
               {a.fileName}
             </span>
-            <span className="text-[14px] text-nav">
+            <span className="text-[12px] text-nav">
               {formatBytes(a.sizeBytes)}
               {a.originalSizeBytes ? ` (compressed from ${formatBytes(a.originalSizeBytes)})` : ""} · {day(a.createdAt)}
               {a.uploadedBy && ` · ${a.uploadedBy.name}`}

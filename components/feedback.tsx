@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { api, ApiError, FLASH_KEY, setLoadErrorHandler } from "@/lib/api";
+import { api, ApiError, download, FLASH_KEY, setLoadErrorHandler, type Query } from "@/lib/api";
 import { Modal, ToneIcon, type Tone } from "./ui";
 
 /* =====================================================================================================
@@ -59,6 +59,27 @@ export function useRemove(onRemoved: () => void) {
   return { remove, removing };
 }
 
+/**
+ * A Report button: downloads the list's CSV for its current search and filters (every matching record the user may
+ * see, not just the page shown), one download at a time, and says how it went.
+ */
+export function useReport(path: string, what: string) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const run = async (query: Query) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      toast.success(`${what} downloaded`, await download(path, undefined, query));
+    } catch (err) {
+      toast.apiError(err, `Couldn't download the ${what.toLowerCase()}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return { busy, run };
+}
+
 export const errorDetail = (err: unknown) => (err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
 
 function ToastCard({ toast, onClose, onHover }: { toast: Toast; onClose: () => void; onHover: (hovering: boolean) => void }) {
@@ -66,14 +87,14 @@ function ToastCard({ toast, onClose, onHover }: { toast: Toast; onClose: () => v
     <div
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
-      className={`pointer-events-auto flex w-full items-start gap-3 rounded-[16px] border border-stroke2 bg-primary py-[14px] pr-3 pl-4 shadow-[0_8px_24px_rgb(21_46_175/0.12)] transition-[opacity,translate] duration-200 sm:w-[380px] ${
+      className={`pointer-events-auto flex w-full items-start gap-2.5 rounded-[14px] border border-stroke2 bg-primary py-3 pr-2.5 pl-3.5 shadow-[0_8px_24px_rgb(21_46_175/0.12)] transition-[opacity,translate] duration-200 sm:w-[360px] ${
         toast.leaving ? "translate-y-2 opacity-0" : "animate-rise"
       }`}
     >
-      <ToneIcon tone={toast.tone} />
-      <div className="flex min-w-0 flex-1 flex-col gap-[2px] pt-[1px]">
-        <p className="text-[16px] font-semibold tracking-[-0.32px] text-black">{toast.title}</p>
-        {toast.detail && <p className="text-[14px] break-words text-nav">{toast.detail}</p>}
+      <ToneIcon tone={toast.tone} size={20} />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="text-[14px] font-semibold text-black">{toast.title}</p>
+        {toast.detail && <p className="text-[13px] break-words text-nav">{toast.detail}</p>}
       </div>
       <button suppressHydrationWarning type="button" aria-label="Dismiss notification" onClick={onClose} className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-nav opacity-60 transition-opacity hover:bg-bg5 hover:opacity-100">
         <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round">
@@ -186,15 +207,15 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           {region(false)}
           {region(true)}
         </section>
-        <Modal open={!!confirmState} onClose={() => settle(false)} title={confirmState?.title ?? ""} className="w-[560px] gap-5!">
+        <Modal open={!!confirmState} onClose={() => settle(false)} title={confirmState?.title ?? ""} className="w-[460px] gap-4!">
           {confirmState && (
             <>
-              <div className="flex items-start gap-3 text-[16px] text-nav">
-                <ToneIcon tone={confirmState.danger ? "warning" : "info"} />
-                <div className="pt-[1px]">{confirmState.message}</div>
+              <div className="flex items-start gap-2.5 text-[14px] text-nav">
+                <ToneIcon tone={confirmState.danger ? "warning" : "info"} size={20} />
+                <div>{confirmState.message}</div>
               </div>
-              <div className="flex items-center justify-end gap-[6px]">
-                <button suppressHydrationWarning type="button" onClick={() => settle(false)} className="h-10 cursor-pointer rounded-[12px] border border-button bg-white px-4 dark:bg-transparent text-[16px] font-medium text-black">
+              <div className="flex items-center justify-end gap-2">
+                <button suppressHydrationWarning type="button" onClick={() => settle(false)} className="h-10 cursor-pointer rounded-[12px] border border-button bg-white px-4 dark:bg-transparent text-[14px] font-medium text-black transition-colors hover:bg-bg5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
                   Cancel
                 </button>
                 <button
@@ -202,7 +223,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
                   type="button"
                   autoFocus
                   onClick={() => settle(true)}
-                  className={`h-10 cursor-pointer rounded-[12px] px-4 text-[16px] font-medium text-white ${confirmState.danger ? "bg-danger" : "bg-button"}`}
+                  className={`h-10 cursor-pointer rounded-[12px] px-4 text-[14px] font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${confirmState.danger ? "bg-danger" : "bg-button"}`}
                 >
                   {confirmState.confirmLabel}
                 </button>

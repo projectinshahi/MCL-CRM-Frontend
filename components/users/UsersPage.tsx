@@ -5,7 +5,7 @@ import { Icon } from "@/components/Icon";
 import { useConfirm, useToast } from "@/components/feedback";
 import { PhoneInput } from "@/components/PhoneInput";
 import { SkeletonRows, SubtitleSkeleton } from "@/components/skeletons";
-import { Badge, EmptyState, IconButton, LoadFailed, Modal, ModalActions, Pagination, Popover, PrimaryButton, SearchBox, SelectField, TextInput, ToolButton } from "@/components/ui";
+import { activeFilters, Badge, col, EmptyState, IconButton, LoadFailed, Modal, ModalActions, Pagination, Popover, PrimaryButton, SearchBox, SelectField, TextInput, ToolButton } from "@/components/ui";
 import { api, cap, day, fieldErrors, paging, pastEnd, useApi, useDebounced, type List } from "@/lib/api";
 import { phoneError } from "@/lib/phone";
 import { useMe } from "@/components/Shell";
@@ -30,13 +30,12 @@ type User = {
 };
 export type RoleSummary = { id: string; name: string; permissions: string[]; userCount: number; members: { initials: string }[]; extraMembers: number };
 
-// Figma 1:6530 column widths (sum 1150 = card content width); columns grow proportionally on wider screens.
-const col = (w: number) => ({ flex: `${w} 0 0`, minWidth: w });
+// Figma 1:6530 columns at 14px text (sum 960 = table min-width); they grow proportionally on wider screens.
 const HEAD: [string, number, string?][] = [
-  ["Name", 200], ["Role", 100], ["EMail", 200], ["Status", 130], ["Assigned Leads", 160], ["Converted", 100],
-  ["Created Date", 140, "text-center"], ["Actions", 120, "text-center"],
+  ["Name", 170], ["Role", 120], ["EMail", 200], ["Status", 90], ["Assigned Leads", 110, "text-center"], ["Converted", 90, "text-center"],
+  ["Created", 100, "text-center"], ["Actions", 80, "text-center"],
 ];
-const cell = "text-[16px] font-medium text-black";
+const cell = "text-[14px] font-medium break-words text-black";
 
 type Draft = { name: string; email: string; phone: string; role: string; password: string };
 const EMPTY: Draft = { name: "", email: "", phone: "", role: "", password: "" };
@@ -195,32 +194,31 @@ export function UsersPage() {
     </UField>
   );
 
-  const option = "flex w-full cursor-pointer items-center justify-between border-b-[0.5px] border-stroke2 px-4 py-[10px] text-left text-[16px] tracking-[-0.32px] text-nav";
+  const option = "flex min-h-9 w-full cursor-pointer items-center justify-between border-b-[0.5px] border-stroke2 px-3.5 py-2 text-left text-[14px] text-nav";
 
   return (
-    <div className="flex flex-col gap-[18px] p-4 sm:p-6">
+    <div className="flex flex-col gap-4 p-4 sm:p-6">
       {/* Add User (1:6509) → OVERLAY Create New User 1:7919, instant */}
       <SectionHeader title="User Management" subtitle={list ? `${list.total} Users` : !users.error && <SubtitleSkeleton />} action={<PrimaryButton onClick={() => open()}>Add User</PrimaryButton>} />
       <UnderlineTabs tabs={USER_TABS} active={0} />
 
-      {/* Figma lays children out at x=21 (stroke included in layout) → px-20 + 1px border */}
-      <section className="flex min-w-0 flex-col rounded-[22px] border border-stroke2 bg-primary px-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-6 pb-[30px]">
-          <h2 className="text-[28px] font-medium text-black">Users</h2>
+      <section className="flex min-w-0 flex-col rounded-[16px] border border-stroke2 bg-primary px-4 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 py-4">
+          <h2 className="text-[18px] font-semibold tracking-[-0.36px] text-black">Users</h2>
           <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
             <SearchBox
               value={query}
               onChange={setQuery}
             />
-            <ToolButton label="Filter" icon="filter" btnRef={filterRef} onClick={() => setFilterOpen(true)} />
+            <ToolButton label="Filter" icon="filter" btnRef={filterRef} count={activeFilters(filter)} onClick={() => setFilterOpen(true)} />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <div className="flex min-w-[1150px] flex-col gap-[10px]">
-            <div className="flex items-center border-b border-stroke2 py-5 text-[16px] font-medium tracking-[-0.64px] text-nav">
-              {HEAD.map(([label, w, align]) => (
-                <p key={label} className={`opacity-80 ${align ?? ""}`} style={col(w)}>
+        <div className="table-scroll">
+          <div className="flex min-w-[960px] flex-col">
+            <div className="flex items-center border-b border-stroke2 py-3 text-[13px] font-medium text-nav/80">
+              {HEAD.map(([label, w, align], i) => (
+                <p key={label} className={`${align ?? ""} ${i === 0 ? "sticky left-0 z-[1] bg-primary" : ""}`} style={col(w)}>
                   {label}
                 </p>
               ))}
@@ -231,19 +229,19 @@ export function UsersPage() {
               <EmptyState>{filtered ? "No users match your search or filters." : "No users yet. Use Add User to create the first one."}</EmptyState>
             ) : null}
             {list?.items.map((u) => (
-              <div key={u.id} className="flex items-center border-b border-stroke2 pt-[10px] pb-4">
-                <p className={`${cell} tracking-[-0.64px]`} style={col(200)}>{u.name}</p>
-                <p className={`${cell} tracking-[-0.64px]`} style={col(100)}>{u.role.name}</p>
-                <p className={`${cell} tracking-[-0.64px]`} style={col(200)}>{u.email}</p>
-                <div style={col(130)}>
-                  <Badge label={cap(u.status)} width={80} />
+              <div key={u.id} className="flex items-center border-b border-stroke2 py-2.5">
+                <p className={`${cell} sticky left-0 z-[1] flex items-center self-stretch bg-primary pr-3`} style={col(170)}>{u.name}</p>
+                <p className={`${cell} pr-3`} style={col(120)}>{u.role.name}</p>
+                <p className={`${cell} truncate pr-3`} style={col(200)} title={u.email}>{u.email}</p>
+                <div style={col(90)}>
+                  <Badge label={cap(u.status)} width={70} />
                 </div>
-                <p className={`${cell} text-center tracking-[-0.64px]`} style={col(160)}>{u.assignedLeads}</p>
-                <p className={`${cell} text-center tracking-[-0.64px]`} style={col(100)}>{u.convertedLeads}</p>
-                <p className={`${cell} text-center`} style={col(140)}>{day(u.createdAt)}</p>
-                <div className="flex items-center justify-center gap-1" style={col(120)}>
-                  {/* Edit (1:6551) → OVERLAY Edit User 1:7950, instant. Figma: edit 46×38, delete 46×36 */}
-                  <IconButton icon="edit" label={`Edit ${u.name}`} className="h-[38px]!" onClick={() => open(u)} />
+                <p className={`${cell} text-center`} style={col(110)}>{u.assignedLeads}</p>
+                <p className={`${cell} text-center`} style={col(90)}>{u.convertedLeads}</p>
+                <p className={`${cell} text-center`} style={col(100)}>{day(u.createdAt)}</p>
+                <div className="flex items-center justify-center gap-1" style={col(80)}>
+                  {/* Edit (1:6551) → OVERLAY Edit User 1:7950, instant */}
+                  <IconButton icon="edit" label={`Edit ${u.name}`} onClick={() => open(u)} />
                   <IconButton icon="delete" label={`Delete ${u.name}`} onClick={() => remove(u)} disabled={deleting === u.id} />
                 </div>
               </div>
@@ -251,17 +249,15 @@ export function UsersPage() {
           </div>
         </div>
 
-        <div className="pt-[10px]">
-          <Pagination {...paging(list, "Users", setPage)} />
-        </div>
+        <Pagination {...paging(list, "Users", setPage)} />
       </section>
 
       {/* Filter → dropdown 1:7981 (MANUAL, 25% backdrop, close on outside click) */}
-      <Popover anchor={filterRef} open={filterOpen} onClose={() => setFilterOpen(false)} dx={-38} dy={54}>
-        <div className="w-[142px] overflow-hidden rounded-[9px] border border-stroke2 bg-primary">
+      <Popover anchor={filterRef} open={filterOpen} onClose={() => setFilterOpen(false)} dx={-38} dy={46}>
+        <div className="w-[180px] overflow-hidden rounded-[12px] border border-stroke2 bg-primary shadow-[0_8px_24px_rgb(21_46_175/0.12)]">
           <button suppressHydrationWarning type="button" aria-expanded={roleMenu} onClick={() => setRoleMenu((o) => !o)} className={option}>
             Role
-            <Icon name="arrow-right" size={18} className={`text-nav transition-transform ${roleMenu ? "-rotate-90" : "rotate-90"}`} />
+            <Icon name="arrow-right" size={16} className={`text-nav transition-transform ${roleMenu ? "-rotate-90" : "rotate-90"}`} />
           </button>
           {roleMenu &&
             roles.map((r) => (
@@ -277,7 +273,7 @@ export function UsersPage() {
         </div>
       </Popover>
 
-      <Modal open={editing !== null} onClose={close} title={editing ? "Edit User" : "Create New User"} className={`w-[762px] ${USER_MODAL}`}>
+      <Modal open={editing !== null} onClose={close} title={editing ? "Edit User" : "Create New User"} className={`w-[600px] ${USER_MODAL}`}>
         <UField label="User Name" error={errors.name} required>
           <TextInput value={draft.name} onChange={(e) => set("name")(e.target.value)} placeholder="eg., Praveen" aria-invalid={!!errors.name} aria-required />
         </UField>
@@ -314,7 +310,7 @@ function PasswordInput({ id, value, onChange, placeholder, invalid, required }: 
         placeholder={placeholder}
         aria-invalid={invalid}
         aria-required={required || undefined}
-        className="pr-14!"
+        className="pr-11!"
       />
       <button
         suppressHydrationWarning
@@ -322,9 +318,9 @@ function PasswordInput({ id, value, onChange, placeholder, invalid, required }: 
         aria-label={show ? "Hide password" : "Show password"}
         aria-pressed={show}
         onClick={() => setShow(!show)}
-        className="absolute top-1/2 right-4 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-nav transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-focus"
+        className="absolute top-1/2 right-2 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-nav transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-focus"
       >
-        <Icon name="eye" size={20} className={`transition-opacity ${show ? "" : "opacity-50"}`} />
+        <Icon name="eye" size={18} className={`transition-opacity ${show ? "" : "opacity-50"}`} />
       </button>
     </div>
   );

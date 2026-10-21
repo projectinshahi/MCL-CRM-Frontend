@@ -28,8 +28,8 @@ export function UnderlineTabs({ tabs, active, className = "font-sans" }: {
           key={t.href}
           href={t.href}
           aria-current={i === active ? "page" : undefined}
-          className={`flex shrink-0 justify-center pb-[10px] text-[20px] font-medium whitespace-nowrap ${t.cls} ${
-            i === active ? "border-b-2 border-[#6e85e5] text-black" : "text-nav opacity-70"
+          className={`flex shrink-0 justify-center pb-2 text-[15px] font-medium whitespace-nowrap ${t.cls} ${
+            i === active ? "border-b-2 border-[#6e85e5] text-black" : "text-nav opacity-70 hover:opacity-100"
           }`}
         >
           {t.label}

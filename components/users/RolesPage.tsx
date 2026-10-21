@@ -19,19 +19,19 @@ const noScrollbar = "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
 function RoleCard({ role, label, onEdit, onDelete, deleting }: { role: Role; label: (code: string) => string; onEdit: () => void; onDelete: () => void; deleting: boolean }) {
   return (
-    <article className="flex min-w-0 flex-col gap-3 rounded-[16px] border border-stroke2 bg-primary px-[30px] py-8">
-      <h2 className="border-b border-stroke2 pb-4 text-[25px] font-medium text-black">{role.name}</h2>
-      <div className="flex flex-col gap-[18px]">
+    <article className="flex min-w-0 flex-col gap-3 rounded-[16px] border border-stroke2 bg-primary p-5">
+      <h2 className="border-b border-stroke2 pb-3 text-[18px] font-semibold tracking-[-0.36px] text-black">{role.name}</h2>
+      <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           {[["Permissions", role.permissions.length], ["Users", role.userCount]].map(([title, n]) => (
-            <div key={title} className="flex w-[105px] flex-col gap-[6px]">
-              <p className="text-[18px] font-medium whitespace-nowrap text-nav">{title}</p>
-              <p className={`${inter.className} text-[40px] leading-[round(1.21em,1px)] font-semibold text-selected opacity-80`}>{n}</p>
+            <div key={title} className="flex w-[105px] flex-col gap-1">
+              <p className="text-[13px] font-medium whitespace-nowrap text-nav">{title}</p>
+              <p className={`${inter.className} text-[28px] leading-[round(1.21em,1px)] font-semibold text-selected opacity-80`}>{n}</p>
             </div>
           ))}
         </div>
-        <div className="flex flex-col gap-[14px]">
-          <p className="text-[18px] font-medium text-nav">Permissions</p>
+        <div className="flex flex-col gap-2">
+          <p className="text-[13px] font-medium text-nav">Permissions</p>
           {/* Figma: fixed-width row with overflow scroll, so the chips are clipped at the card edge */}
           <div className={`flex gap-2 overflow-x-auto ${noScrollbar}`}>
             {role.permissions.map((p) => (
@@ -39,34 +39,34 @@ function RoleCard({ role, label, onEdit, onDelete, deleting }: { role: Role; lab
             ))}
           </div>
         </div>
-        <div className="flex flex-col gap-[14px]">
-          <p className="text-[18px] font-medium text-[#99a4b0]">Assigned Users</p>
-          <div className="flex min-h-[30px] items-center gap-[10px]">
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2">
+          <p className="text-[13px] font-medium text-nav opacity-70">Assigned Users</p>
+          <div className="flex min-h-7 items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {role.members.map((m, i) => (
-                <span key={i} className="flex size-[30px] items-center justify-center rounded-full" style={{ background: avatar(m.initials) }}>
-                  <span className="text-[14px] font-medium text-white opacity-60">{m.initials}</span>
+                <span key={i} className="flex size-7 items-center justify-center rounded-full" style={{ background: avatar(m.initials) }}>
+                  <span className="text-[11px] font-semibold text-white">{m.initials}</span>
                 </span>
               ))}
             </div>
             {role.extraMembers > 0 && (
-              <span className="flex size-5 items-center justify-center rounded-full bg-[#787878]">
-                <span className="text-[8px] font-semibold text-white opacity-80">+{role.extraMembers}</span>
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#787878] px-1">
+                <span className="text-[11px] font-semibold text-white">+{role.extraMembers}</span>
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-[14px]">
+        <div className="flex items-center gap-2">
           {/* Edit → Edit Role overlay (1:7806); Delete → API (refused while users still hold the role) */}
-          <button suppressHydrationWarning type="button" onClick={onEdit} className="flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] border border-button bg-primary px-4 py-[10px] text-[16px] font-medium text-link">
-            <Icon name="edit" size={18} />
+          <button suppressHydrationWarning type="button" onClick={onEdit} className="flex h-9 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-button bg-primary px-4 text-[14px] font-medium text-link transition-colors hover:bg-bg5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+            <Icon name="edit" size={16} />
             Edit
           </button>
           <button suppressHydrationWarning type="button" onClick={onDelete}
             disabled={deleting}
             aria-busy={deleting || undefined}
-            className="flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-button px-4 py-[10px] text-[16px] font-medium text-white">
-            {deleting ? <Spinner /> : <Icon name="delete" size={18} />}
+            className="flex h-9 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-button px-4 text-[14px] font-medium text-white transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+            {deleting ? <Spinner /> : <Icon name="delete" size={16} />}
             {deleting ? "Deleting…" : "Delete"}
           </button>
         </div>
@@ -177,7 +177,7 @@ export function RolesPage() {
   const togglePerm = (p: string) => setDraft((d) => ({ ...d, permissions: toggle(d.permissions, p) }));
 
   return (
-    <div className="flex flex-col gap-[18px] p-4 sm:p-6">
+    <div className="flex flex-col gap-4 p-4 sm:p-6">
       {/* Add Role (1:6729): prototype points at Create New User (1:7919), a wiring slip — the dedicated Create New Role overlay 1:7850 is used */}
       <SectionHeader title="User Management" subtitle={userTotal === undefined ? !users.error && <SubtitleSkeleton /> : `${userTotal} Users`} action={<PrimaryButton onClick={startCreate}>Add Role</PrimaryButton>} />
       {/* Figma 1:6730 sets these tabs in Inter Medium (1:6510 on the User tab uses Montserrat) */}
@@ -186,19 +186,19 @@ export function RolesPage() {
       {!roles.data && roles.error && <LoadFailed what="roles" onRetry={roles.reload} />}
       {!roles.data && !roles.error && (
         <div className="grid gap-4 lg:grid-cols-2 [&>div]:contents">
-          <SkeletonCards rows={4} className="flex flex-col gap-[18px] rounded-[16px] border border-stroke2 bg-primary px-[30px] py-8">
-            <Skeleton className="h-8 w-40" />
+          <SkeletonCards rows={4} className="flex flex-col gap-4 rounded-[16px] border border-stroke2 bg-primary p-5">
+            <Skeleton className="h-6 w-36" />
             <div className="flex justify-between">
-              <Skeleton className="h-[72px] w-[105px]" />
-              <Skeleton className="h-[72px] w-[105px]" />
+              <Skeleton className="h-[52px] w-[105px]" />
+              <Skeleton className="h-[52px] w-[105px]" />
             </div>
             <div className="flex gap-2">
-              {[90, 70, 110].map((w) => <Skeleton key={w} className="h-8 rounded-[16px]" style={{ width: w }} />)}
+              {[90, 70, 110].map((w) => <Skeleton key={w} className="h-6 rounded-full" style={{ width: w }} />)}
             </div>
-            <Skeleton className="h-[30px] w-32" />
-            <div className="flex gap-[14px]">
-              <Skeleton className="h-11 flex-1 rounded-[12px]" />
-              <Skeleton className="h-11 flex-1 rounded-[12px]" />
+            <Skeleton className="h-7 w-32" />
+            <div className="flex gap-2">
+              <Skeleton className="h-9 flex-1 rounded-[10px]" />
+              <Skeleton className="h-9 flex-1 rounded-[10px]" />
             </div>
           </SkeletonCards>
         </div>
@@ -209,13 +209,13 @@ export function RolesPage() {
         ))}
       </div>
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Create New Role" className={`w-[762px] gap-7! ${USER_MODAL}`}>
+      <Modal open={creating} onClose={() => setCreating(false)} title="Create New Role" className={`w-[640px] ${USER_MODAL}`}>
         <UField label="Role Name" error={nameError} required>
-          <CaretInput caret="right-[25px] text-white">
-            <TextInput value={draft.name} onChange={(e) => setName(e.target.value)} placeholder="eg., Admin" aria-invalid={!!nameError} aria-required className="h-[50px] pr-[58px]! pl-6!" />
+          <CaretInput caret="right-3 text-nav">
+            <TextInput value={draft.name} onChange={(e) => setName(e.target.value)} placeholder="eg., Admin" aria-invalid={!!nameError} aria-required className="pr-10!" />
           </CaretInput>
         </UField>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <FieldLabel>Permissions</FieldLabel>
           <PermissionPills options={permissions} value={draft.permissions} onToggle={togglePerm} />
         </div>
@@ -229,7 +229,7 @@ export function RolesPage() {
         open={editing !== null}
         onClose={() => setEditing(null)}
         title={picking ? "Permissions" : "Edit Role"}
-        className={picking ? "w-[760px] gap-4! border-transparent! [&>button]:hidden [&>div:first-child]:hidden" : `w-[611px] gap-4! ${USER_MODAL}`}
+        className={picking ? "w-[640px] gap-4! border-transparent! [&>button]:hidden [&>div:first-child]:hidden" : `w-[520px] gap-4! ${USER_MODAL}`}
       >
         {picking ? (
           <>
@@ -247,24 +247,24 @@ export function RolesPage() {
           </>
         ) : (
           <>
-            <UField label="Role Name" gap="gap-[6px]" error={nameError} required>
-              <CaretInput caret="right-[13px] text-nav">
-                <TextInput value={draft.name} onChange={(e) => setName(e.target.value)} aria-invalid={!!nameError} aria-required className="h-[50px] pr-[46px]! pl-6! text-nav!" />
+            <UField label="Role Name" error={nameError} required>
+              <CaretInput caret="right-3 text-nav">
+                <TextInput value={draft.name} onChange={(e) => setName(e.target.value)} aria-invalid={!!nameError} aria-required className="pr-10! text-nav!" />
               </CaretInput>
             </UField>
-            <div className="flex flex-col gap-[6px]">
+            <div className="flex flex-col gap-1.5">
               <FieldLabel>Proof of Delivery</FieldLabel>
-              <div className="flex items-center">
-                <div className={`flex w-[450px] min-w-0 gap-2 overflow-x-auto py-[10px] ${noScrollbar}`}>
+              <div className="flex items-center gap-4">
+                <div className={`flex min-w-0 flex-1 gap-2 overflow-x-auto py-2.5 ${noScrollbar}`}>
                   {inOrder(draft.permissions).map((p) => (
                     <Chip key={p} label={label(p)}>
-                      <button suppressHydrationWarning type="button" aria-label={`Remove ${p}`} onClick={() => togglePerm(p)} className="absolute -top-[10px] -right-[2px] cursor-pointer rounded-full bg-[#104b58] p-[2px] text-white">
-                        <Icon name="close" size={16} />
+                      <button suppressHydrationWarning type="button" aria-label={`Remove ${p}`} onClick={() => togglePerm(p)} className="absolute -top-2 -right-1 cursor-pointer rounded-full bg-[#104b58] p-0.5 text-white">
+                        <Icon name="close" size={12} />
                       </button>
                     </Chip>
                   ))}
                 </div>
-                <button suppressHydrationWarning type="button" aria-label="Add permissions" onClick={openPicker} className="ml-[63px] flex size-[33px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#104b58] bg-[#142e38] text-white">
+                <button suppressHydrationWarning type="button" aria-label="Add permissions" onClick={openPicker} className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#104b58] bg-[#142e38] text-white">
                   <Icon name="close" size={16} className="rotate-45" />
                 </button>
               </div>

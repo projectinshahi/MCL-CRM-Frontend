@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, use, useCallback, useLayoutEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { useToast } from "@/components/feedback";
-import { FilterMenu, PageHeader, Popover, PrimaryButton, SearchBox, ToolButton } from "@/components/ui";
+import { useReport } from "@/components/feedback";
+import { activeFilters, FilterMenu, PageHeader, Popover, PrimaryButton, SearchBox, ToolButton } from "@/components/ui";
 import { CreateLeadModal, PRIORITIES, useLookups } from "@/components/leads/LeadModals";
 import { SubtitleSkeleton } from "@/components/skeletons";
 import { cap, useApi, useDebounced, type List } from "@/lib/api";
@@ -50,19 +50,19 @@ function LeadFilterMenu({ onPicked }: { onPicked: () => void }) {
 
 // Search / Report / Filter group: inside the table card (Table view), in the toggle row (Pipeline view).
 export function LeadTools({ className = "" }: { className?: string }) {
-  const { search, setSearch } = useLeads();
-  const toast = useToast();
+  const { search, setSearch, filter, query } = useLeads();
+  const report = useReport("/leads/export", "Leads report");
   const btn = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   return (
     <div className={`flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto ${className}`}>
       <SearchBox value={search} onChange={setSearch} />
-      {/* Report: export scope not decided yet (report O1 / Q23) */}
-      <ToolButton label="Report" icon="download" onClick={() => toast.info("Lead reports aren't available yet", "Export will be added once its contents are agreed.")} />
-      <ToolButton label="Filter" icon="filter" btnRef={btn} onClick={() => setOpen(true)} />
+      {/* Report: every lead matching the search and filters (all pages), as CSV */}
+      <ToolButton label="Report" icon="download" busy={report.busy} onClick={() => report.run(query)} />
+      <ToolButton label="Filter" icon="filter" btnRef={btn} count={activeFilters(filter)} onClick={() => setOpen(true)} />
       {/* Figma: MANUAL overlay at (-38.2, 54) from the Filter button, 25% backdrop */}
-      <Popover anchor={btn} open={open} onClose={close} dx={-38.2} dy={54}>
+      <Popover anchor={btn} open={open} onClose={close} dx={-38.2} dy={46}>
         <LeadFilterMenu onPicked={close} />
       </Popover>
     </div>
@@ -70,20 +70,20 @@ export function LeadTools({ className = "" }: { className?: string }) {
 }
 
 /* ---------- Table View / Pipeline View segmented control (1:6139 / 1:6998) ---------- */
-// Fixed widths = Figma (text + 2×16 padding) so the active pill can slide between them.
+// Fixed widths (14px text + 2×14 padding) so the active pill can slide between them; 40px tall like the tools beside it.
 const VIEWS = [
-  { href: "/leads", label: "Table View", w: 120 },
-  { href: "/leads/pipeline", label: "Pipeline View", w: 143 },
+  { href: "/leads", label: "Table View", w: 104 },
+  { href: "/leads/pipeline", label: "Pipeline View", w: 124 },
 ];
 
 function ViewToggle({ pipeline }: { pipeline: boolean }) {
   return (
-    <nav aria-label="Leads view" className="relative flex shrink-0 gap-[7px] rounded-[22px] border border-stroke2 bg-primary p-[10px]">
+    <nav aria-label="Leads view" className="relative flex shrink-0 gap-1 rounded-[12px] border border-stroke2 bg-primary p-[3px]">
       {/* Smart Animate 300ms ease-out (Figma 1:6143 / 1:6999) */}
       <span
         aria-hidden
-        className="absolute top-[10px] left-[10px] h-10 rounded-[12px] bg-button transition-[translate,width]"
-        style={{ width: VIEWS[+pipeline].w, translate: pipeline ? `${VIEWS[0].w + 7}px` : "0" }}
+        className="absolute top-[3px] left-[3px] h-8 rounded-[9px] bg-button transition-[translate,width]"
+        style={{ width: VIEWS[+pipeline].w, translate: pipeline ? `${VIEWS[0].w + 4}px` : "0" }}
       />
       {VIEWS.map((v, i) => {
         const active = i === +pipeline;
@@ -93,7 +93,7 @@ function ViewToggle({ pipeline }: { pipeline: boolean }) {
             href={v.href}
             aria-current={active ? "page" : undefined}
             style={{ width: v.w }}
-            className={`relative flex h-10 items-center justify-center text-[16px] font-medium whitespace-nowrap transition-colors ${active ? "text-white" : "text-black"}`}
+            className={`relative flex h-8 items-center justify-center rounded-[9px] text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${active ? "text-white" : "text-black"}`}
           >
             {v.label}
           </Link>
@@ -129,7 +129,7 @@ export function LeadsView({ children }: { children: ReactNode }) {
 
   return (
     <LeadsCtx value={{ search, q, setSearch, filter, setFilter, version, refresh }}>
-      <div className="flex flex-col gap-[18px] p-4 sm:p-6">
+      <div className="flex flex-col gap-4 p-4 sm:p-6">
         <PageHeader
           title="Leads Management"
           subtitle={total === undefined ? !all.error && <SubtitleSkeleton /> : `${total} Total Leads`}

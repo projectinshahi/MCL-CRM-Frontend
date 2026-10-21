@@ -1,8 +1,7 @@
 "use client";
 
 import { createContext, use, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Icon } from "@/components/Icon";
-import { Field, Modal, ModalActions, Popover, SelectField, TextArea, TextInput } from "@/components/ui";
+import { FIELD_LABEL, Field, Modal, ModalActions, SelectField, TextArea, TextInput } from "@/components/ui";
 import { useToast } from "@/components/feedback";
 import { PhoneInput } from "@/components/PhoneInput";
 import { Loading, Skeleton } from "@/components/skeletons";
@@ -168,10 +167,10 @@ function leadBody(f: FormData, customerType?: "direct" | "b2b") {
   };
 }
 
-// Figma Create/Edit Lead frames are 966×635 viewports whose content scrolls inside.
-export const BIG = "w-[966px] max-h-[min(635px,calc(100dvh-32px))]!";
+// Create/Edit Lead (Figma 1:7358 / 1:7595): two or three fields a row; the form scrolls between the pinned title and buttons.
+export const BIG = "w-[800px]";
 
-export const Row = ({ children }: { children: ReactNode }) => <div className="flex flex-col gap-4 sm:flex-row sm:gap-2">{children}</div>;
+export const Row = ({ children }: { children: ReactNode }) => <div className="flex flex-col gap-4 sm:flex-row sm:gap-3">{children}</div>;
 
 export function Input({ label, name, placeholder, type, initial, required }: { label: string; name: string; placeholder?: string; type?: string; initial?: string | number | null; required?: boolean }) {
   const error = useErr(name);
@@ -190,9 +189,6 @@ export function Area({ label, name, placeholder, initial }: { label: string; nam
     </Field>
   );
 }
-
-const selectCls =
-  "flex min-h-[46px] w-full cursor-pointer items-center gap-[10px] rounded-[16px] border border-stroke2 bg-bg5 py-3 pr-[11px] pl-[23px] text-left text-[16px] font-medium text-black";
 
 // Lead Title … Description (shared by Create 1:7358/1:7470 and Edit 1:7595)
 function LeadFieldsBlock({ lead, contactRow, children }: { lead?: Lead; contactRow: ReactNode; children?: ReactNode }) {
@@ -233,7 +229,7 @@ function LogisticsFields({ lead }: { lead?: Lead }) {
   const s = lead?.shipment;
   return (
     <>
-      <h3 className="border-b border-stroke2 pb-8 text-[22px] font-medium text-black sm:text-[28px]">Logistic - Specific Fields</h3>
+      <h3 className="border-b border-stroke2 pb-3 text-[16px] font-semibold tracking-[-0.32px] text-black">Logistic - Specific Fields</h3>
       <Row>
         <Input label="Destination Country" name="destination" initial={s?.destinationCountry} />
         <Input label="Commodity" name="commodity" initial={s?.commodity} />
@@ -274,9 +270,7 @@ export function PhoneField({ initial }: { initial?: string | null }) {
 /* ---------- Create Lead (1:7358 Direct / 1:7470 B2B) ---------- */
 function CreateLeadForm({ onClose, onCreate }: { onClose: () => void; onCreate: (lead: Lead) => void }) {
   const form = useRef<HTMLFormElement>(null);
-  const typeBtn = useRef<HTMLButtonElement>(null);
   const [type, setType] = useState<"Direct" | "B2B">("Direct");
-  const [typeOpen, setTypeOpen] = useState(false);
   const [files, setFiles] = useState<Picked[]>([]);
   const [progress, setProgress] = useState<number | null>(null);
   // One id per form: a second Done (or a retry after a lost response) finds this lead instead of making another.
@@ -316,7 +310,7 @@ function CreateLeadForm({ onClose, onCreate }: { onClose: () => void; onCreate: 
 
   return (
     <ErrCtx value={errors}>
-    <form ref={form} noValidate onSubmit={submit} onInput={clearOnInput} className="-mt-2 flex flex-col gap-6 pb-[30px]">
+    <form ref={form} noValidate onSubmit={submit} onInput={clearOnInput} className="flex flex-col gap-5">
       <div className="flex flex-col gap-4">
         <LeadFieldsBlock
           contactRow={
@@ -327,34 +321,10 @@ function CreateLeadForm({ onClose, onCreate }: { onClose: () => void; onCreate: 
               </Row>
               <Row>
                 <Input label="EMail" name="email" type="email" placeholder="eg, asdfg@gmail.com" />
-                <div className="flex w-full min-w-0 flex-col gap-[6px]">
-                  <span className="text-[18px] font-medium text-black sm:text-[20px]">Customer Type</span>
-                  <button suppressHydrationWarning ref={typeBtn} type="button" aria-haspopup="listbox" onClick={() => setTypeOpen(true)} className={selectCls}>
-                    <span className="flex-1">{type}</span>
-                    <Icon name="arrow-right" size={18} className="rotate-90 text-black" />
-                  </button>
-                  {/* Figma 1:7760 / 1:7765: MANUAL overlay at (313.2, 46.2) from the field, 25% backdrop */}
-                  <Popover anchor={typeBtn} open={typeOpen} onClose={() => setTypeOpen(false)} dx={313.2} dy={46.2}>
-                    <ul role="listbox" aria-label="Customer Type" className="w-[133px] overflow-hidden rounded-[9px] bg-white dark:bg-primary">
-                      {(type === "Direct" ? (["Direct", "B2B"] as const) : (["B2B", "Direct"] as const)).map((t) => (
-                        <li key={t} className="flex h-10 border-stroke2 not-last:h-[40.5px] not-last:border-b-[0.5px]">
-                          <button suppressHydrationWarning
-                            type="button"
-                            role="option"
-                            aria-selected={t === type}
-                            onClick={() => {
-                              setType(t);
-                              setTypeOpen(false);
-                            }}
-                            className="w-full cursor-pointer text-center text-[16px] tracking-[-0.32px] text-nav"
-                          >
-                            {t}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </Popover>
-                </div>
+                {/* Figma 1:7760 / 1:7765: the same dropdown as every other field */}
+                <Field label="Customer Type">
+                  <SelectField value={type} options={["Direct", "B2B"]} onChange={(t) => setType(t as "Direct" | "B2B")} placeholder="Customer Type" />
+                </Field>
               </Row>
             </>
           }
@@ -420,7 +390,7 @@ function EditLeadForm({ lead, onClose, onSaved }: { lead: Lead; onClose: () => v
           onSaved(saved);
         });
       }}
-      className="-mt-2 flex flex-col gap-6 pb-[30px]"
+      className="flex flex-col gap-5"
     >
       <div className="flex flex-col gap-4">
         <LeadFieldsBlock
@@ -447,14 +417,14 @@ function SavedFiles({ lead }: { lead: Lead }) {
   const fetched = useApi<Lead>(lead.attachments ? null : `/leads/${lead.id}`).data;
   const items = lead.attachments ?? fetched?.attachments;
   return (
-    <div className="flex flex-col gap-[6px]">
-      <span className="text-[18px] font-medium text-black sm:text-[20px]">Attached Files</span>
+    <div className="flex flex-col gap-1.5">
+      <span className={FIELD_LABEL}>Attached Files</span>
       {items ? (
         <AttachmentList base={`/leads/${lead.id}`} items={items} />
       ) : (
         <Loading label="Loading the attached files…" className="flex flex-col gap-2">
-          <Skeleton className="h-11 w-full rounded-[12px]" />
-          <Skeleton className="h-11 w-2/3 rounded-[12px]" />
+          <Skeleton className="h-12 w-full rounded-[12px]" />
+          <Skeleton className="h-12 w-2/3 rounded-[12px]" />
         </Loading>
       )}
     </div>
@@ -513,7 +483,7 @@ function SmallFormBody({ onClose, failTitle, check, submit, children }: Omit<Sma
             onClose();
           });
         }}
-        className="-mt-2 flex flex-col gap-6"
+        className="flex flex-col gap-5"
       >
         <div className="flex flex-col gap-4">{children}</div>
         <ModalActions onCancel={onClose} onDone={() => form.current?.requestSubmit()} pending={pending} />
@@ -524,7 +494,7 @@ function SmallFormBody({ onClose, failTitle, check, submit, children }: Omit<Sma
 
 function SmallForm({ title, open, ...body }: SmallFormProps) {
   return (
-    <Modal open={open} onClose={body.onClose} title={title}>
+    <Modal open={open} onClose={body.onClose} title={title} className="w-[520px]">
       <SmallFormBody {...body} />
     </Modal>
   );

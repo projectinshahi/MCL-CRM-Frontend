@@ -6,6 +6,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/feedback";
 import { Field, Spinner, TextInput, ToneIcon } from "@/components/ui";
+import { landing } from "@/lib/modules";
 import { api, ApiError } from "@/lib/api";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -49,10 +50,11 @@ export default function LoginPage() {
     setError("");
     setStatus("pending");
     try {
-      const { user } = await api<{ user: { name: string } }>("/auth/login", { method: "POST", body: { email, password, remember: f.get("remember") === "on" } });
+      const { user } = await api<{ user: { name: string; permissions: string[] } }>("/auth/login", { method: "POST", body: { email, password, remember: f.get("remember") === "on" } });
       setStatus("success"); // only after the server has set the session
       toast.success(`Welcome back, ${user.name}`);
-      router.replace("/");
+      // The Modules page, or the page that sent the user here (proxy.ts adds ?next=) when the role may open it.
+      router.replace(landing(user.permissions, new URLSearchParams(window.location.search).get("next")));
     } catch (err) {
       setStatus("idle");
       setError(loginError(err));
@@ -63,10 +65,10 @@ export default function LoginPage() {
   const busy = status !== "idle";
 
   return (
-    <form noValidate onSubmit={submit} className="flex flex-col gap-6" aria-busy={status === "pending"}>
+    <form noValidate onSubmit={submit} className="flex flex-col gap-5" aria-busy={status === "pending"}>
       <div className="flex flex-col gap-1">
-        <h1 className="text-[28px] font-semibold tracking-[-0.56px] text-black">Welcome back</h1>
-        <p className="text-[16px] text-muted">Sign in to your MCL CRM account</p>
+        <h1 className="text-[24px] font-semibold tracking-[-0.48px] text-black">Welcome back</h1>
+        <p className="text-[14px] text-muted">Sign in to your MCL CRM account</p>
       </div>
 
       {error && (
@@ -98,7 +100,7 @@ export default function LoginPage() {
             name="password"
             autoComplete="current-password"
             placeholder="Enter your password"
-            className="pr-14!"
+            className="pr-11!"
             aria-invalid={!!fields.password}
             onChange={() => fields.password && setFields((f) => ({ ...f, password: undefined }))}
           />
@@ -108,9 +110,9 @@ export default function LoginPage() {
             aria-label={show ? "Hide password" : "Show password"}
             aria-pressed={show}
             onClick={() => setShow(!show)}
-            className="absolute top-1/2 right-4 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-nav transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-focus"
+            className="absolute top-1/2 right-2 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-nav transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-focus"
           >
-            <Icon name="eye" size={20} className={`transition-opacity ${show ? "" : "opacity-50"}`} />
+            <Icon name="eye" size={18} className={`transition-opacity ${show ? "" : "opacity-50"}`} />
           </button>
         </div>
       </Field>
@@ -130,7 +132,7 @@ export default function LoginPage() {
         type="submit"
         disabled={busy}
         aria-busy={status === "pending"}
-        className={`flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-[16px] text-[18px] font-medium text-white transition-[background-color,transform,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus enabled:hover:bg-secondary enabled:hover:shadow-[0_6px_18px_rgb(21_46_175/0.25)] enabled:active:scale-[0.98] disabled:cursor-wait ${
+        className={`flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[12px] text-[15px] font-medium text-white transition-[background-color,transform,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus enabled:hover:bg-secondary enabled:hover:shadow-[0_6px_18px_rgb(21_46_175/0.25)] enabled:active:scale-[0.98] disabled:cursor-wait ${
           status === "success" ? "bg-success" : "bg-button"
         }`}
       >

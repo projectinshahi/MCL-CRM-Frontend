@@ -8,8 +8,8 @@ import { SectionHeader, UnderlineTabs } from "@/components/users/SectionHeader";
 import { api, fieldErrors, useApi } from "@/lib/api";
 
 const TABS = [
-  { label: "Lead Sources", href: "/settings", cls: "px-[30px]" },
-  { label: "Lead Status", href: "/settings/lead-status", cls: "px-[30px]" },
+  { label: "Lead Sources", href: "/settings", cls: "px-4" },
+  { label: "Lead Status", href: "/settings/lead-status", cls: "px-4" },
 ];
 
 type Item = { id: string; name: string; active?: boolean };
@@ -83,26 +83,25 @@ export function SettingsList({ tab, endpoint, modalTitle, fieldLabel, editTitle,
     });
 
   return (
-    <div className="flex flex-col items-end gap-[18px] p-4 sm:p-6">
-      <div className="flex w-full flex-col gap-[18px]">
+    <div className="flex flex-col items-end gap-4 p-4 sm:p-6">
+      <div className="flex w-full flex-col gap-4">
         <SectionHeader title="Settings" subtitle="Configure Your CRM Workspace" />
         <UnderlineTabs tabs={TABS} active={tab} />
       </div>
 
-      {/* Figma lays rows out at x=21 (stroke included in layout) → px-20 + 1px border */}
-      <ul className="flex w-full flex-col gap-[10px] rounded-[22px] border border-stroke2 bg-primary px-5">
+      <ul className="flex w-full flex-col rounded-[16px] border border-stroke2 bg-primary px-4 sm:px-5">
         {!list.data && !list.error && (
           <li>
             <Loading>
               {[45, 30, 55, 38].map((w) => (
-                <div key={w} className="flex items-center justify-between gap-4 border-b border-stroke2 py-5 last:border-b-0">
-                  <Skeleton className="size-[10px] shrink-0 rounded-full" />
-                  <div className="min-w-0 max-w-[860px] flex-1">
-                    <Skeleton className="h-6" style={{ width: `${w}%` }} />
+                <div key={w} className="flex items-center justify-between gap-3 border-b border-stroke2 py-3 last:border-b-0">
+                  <Skeleton className="size-2 shrink-0 rounded-full" />
+                  <div className="min-w-0 flex-1">
+                    <Skeleton className="h-4" style={{ width: `${w}%` }} />
                   </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Skeleton className="h-9 w-[46px] rounded-[12px]" />
-                    <Skeleton className="h-9 w-[46px] rounded-[12px]" />
+                  <div className="flex shrink-0 gap-1">
+                    <Skeleton className="size-8 rounded-[10px]" />
+                    <Skeleton className="size-8 rounded-[10px]" />
                   </div>
                 </div>
               ))}
@@ -115,10 +114,10 @@ export function SettingsList({ tab, endpoint, modalTitle, fieldLabel, editTitle,
           </li>
         )}
         {items.map((item) => (
-          <li key={item.id} className="flex items-center justify-between gap-4 border-b border-stroke2 py-5 last:border-b-0">
-            <span className="size-[10px] shrink-0 rounded-full bg-nav/50" />
-            <p className="min-w-0 max-w-[860px] flex-1 text-[20px] font-medium tracking-[-0.8px] text-nav">{item.name}</p>
-            <div className="flex shrink-0 gap-2">
+          <li key={item.id} className="flex items-center justify-between gap-3 border-b border-stroke2 py-3 last:border-b-0">
+            <span className="size-2 shrink-0 rounded-full bg-nav/50" />
+            <p className="min-w-0 flex-1 text-[15px] font-medium break-words text-nav">{item.name}</p>
+            <div className="flex shrink-0 gap-1">
               <IconButton icon="edit" label={`Edit ${item.name}`} onClick={() => start(item)} />
               <IconButton icon="delete" label={`Delete ${item.name}`} onClick={() => del(item)} disabled={removing === item.id} />
             </div>
@@ -128,7 +127,7 @@ export function SettingsList({ tab, endpoint, modalTitle, fieldLabel, editTitle,
 
       <PrimaryButton onClick={() => start(null)}>Add</PrimaryButton>
 
-      <Modal open={open} onClose={close} title={editing ? editTitle : modalTitle} className="w-[700px] gap-4!">
+      <Modal open={open} onClose={close} title={editing ? editTitle : modalTitle} className="w-[480px] gap-4!">
         <Field label={editing ? editLabel : fieldLabel} error={error} required>
           <TextInput
             aria-required
@@ -142,7 +141,7 @@ export function SettingsList({ tab, endpoint, modalTitle, fieldLabel, editTitle,
             autoFocus
           />
         </Field>
-        <div className="pt-2">
+        <div>
           <ModalActions onCancel={close} onDone={done} pending={saving} pendingLabel={editing ? "Saving…" : "Adding…"} />
         </div>
       </Modal>
