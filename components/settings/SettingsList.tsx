@@ -138,7 +138,7 @@ export function SettingsList({ tab, endpoint, modalTitle, fieldLabel, editTitle,
             }}
             onKeyDown={(e) => e.key === "Enter" && done()}
             aria-invalid={!!error}
-            autoFocus
+            data-autofocus
           />
         </Field>
         <div>

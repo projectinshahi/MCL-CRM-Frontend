@@ -210,7 +210,7 @@ export function UsersPage() {
               value={query}
               onChange={setQuery}
             />
-            <ToolButton label="Filter" icon="filter" btnRef={filterRef} count={activeFilters(filter)} onClick={() => setFilterOpen(true)} />
+            <ToolButton label="Filter" icon="filter" btnRef={filterRef} count={activeFilters(filter)} onClick={() => setFilterOpen((o) => !o)} />
           </div>
         </div>
 
@@ -249,12 +249,13 @@ export function UsersPage() {
           </div>
         </div>
 
-        <Pagination {...paging(list, "Users", setPage)} />
+        {/* With the rows: under their placeholders it would jump when they arrive */}
+        {list && <Pagination {...paging(list, "Users", setPage)} />}
       </section>
 
-      {/* Filter → dropdown 1:7981 (MANUAL, 25% backdrop, close on outside click) */}
-      <Popover anchor={filterRef} open={filterOpen} onClose={() => setFilterOpen(false)} dx={-38} dy={46}>
-        <div className="w-[180px] overflow-hidden rounded-[12px] border border-stroke2 bg-primary shadow-[0_8px_24px_rgb(21_46_175/0.12)]">
+      {/* Filter → dropdown 1:7981, hanging from the Filter button (right edges lined up) */}
+      <Popover anchor={filterRef} open={filterOpen} onClose={() => setFilterOpen(false)} align="end">
+        <div className="w-[180px]">
           <button suppressHydrationWarning type="button" aria-expanded={roleMenu} onClick={() => setRoleMenu((o) => !o)} className={option}>
             Role
             <Icon name="arrow-right" size={16} className={`text-nav transition-transform ${roleMenu ? "-rotate-90" : "rotate-90"}`} />

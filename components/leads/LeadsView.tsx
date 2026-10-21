@@ -60,9 +60,9 @@ export function LeadTools({ className = "" }: { className?: string }) {
       <SearchBox value={search} onChange={setSearch} />
       {/* Report: every lead matching the search and filters (all pages), as CSV */}
       <ToolButton label="Report" icon="download" busy={report.busy} onClick={() => report.run(query)} />
-      <ToolButton label="Filter" icon="filter" btnRef={btn} count={activeFilters(filter)} onClick={() => setOpen(true)} />
-      {/* Figma: MANUAL overlay at (-38.2, 54) from the Filter button, 25% backdrop */}
-      <Popover anchor={btn} open={open} onClose={close} dx={-38.2} dy={46}>
+      <ToolButton label="Filter" icon="filter" btnRef={btn} count={activeFilters(filter)} onClick={() => setOpen((o) => !o)} />
+      {/* Figma 1:7751: hangs from the Filter button, right edges lined up */}
+      <Popover anchor={btn} open={open} onClose={close} align="end">
         <LeadFilterMenu onPicked={close} />
       </Popover>
     </div>

@@ -92,8 +92,9 @@ export default function LeadDetailPage() {
           <button suppressHydrationWarning type="button" onClick={() => setModal("edit")} disabled={!c} className={`${btn} cursor-pointer disabled:cursor-wait disabled:opacity-60`}>
             Edit <Icon name="edit" size={16} />
           </button>
-          {c && seesCustomers && !c.customer && (
-            <button suppressHydrationWarning type="button" onClick={() => setModal("convert")} className={`${btn} cursor-pointer`}>
+          {/* Shown (disabled) while the lead loads, like Edit: appearing later, it pushed the buttons beside it aside. */}
+          {seesCustomers && !c?.customer && (
+            <button suppressHydrationWarning type="button" onClick={() => setModal("convert")} disabled={!c} className={`${btn} cursor-pointer disabled:cursor-wait disabled:opacity-60`}>
               Convert to Customer <Icon name="converted" size={16} />
             </button>
           )}

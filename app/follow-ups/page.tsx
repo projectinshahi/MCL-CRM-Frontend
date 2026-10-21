@@ -99,8 +99,8 @@ export default function FollowUpsPage() {
           />
           {/* Report: every follow-up matching the search and status (all pages), as CSV */}
           <ToolButton label="Report" icon="download" busy={report.busy} onClick={() => report.run({ q, status })} />
-          <ToolButton label="Filter" icon="filter" btnRef={filterBtn} count={status ? 1 : 0} onClick={() => setFiltering(true)} />
-          <Popover anchor={filterBtn} open={filtering} onClose={closeFilter} dx={-38.2} dy={46}>
+          <ToolButton label="Filter" icon="filter" btnRef={filterBtn} count={status ? 1 : 0} onClick={() => setFiltering((f) => !f)} />
+          <Popover anchor={filterBtn} open={filtering} onClose={closeFilter} align="end">
             <FilterMenu
               groups={STATUS_FILTER}
               value={{ status }}
@@ -143,13 +143,13 @@ export default function FollowUpsPage() {
                 <p className={`${text} w-[104px] text-center`}>{day(f.dueDate)}</p>
                 <p className={`${text} w-[104px] text-center`}>{day(f.completedAt)}</p>
                 <div className="flex w-16 shrink-0 justify-center">
-                  {/* Figma: ON_CLICK → "Mark As Completed" (1:7999), MANUAL overlay at (0,0) of this button, no backdrop; Edit and Delete join it */}
+                  {/* Figma: ON_CLICK → "Mark As Completed" (1:7999), with Edit and Delete; it hangs under this button */}
                   <span
                     className="inline-flex"
                     onClick={(e) => {
                       if (completing === f.id || removing === f.id) return;
-                      anchor.current = e.currentTarget;
-                      setMenuFor(f);
+                      anchor.current = e.currentTarget.firstElementChild as HTMLElement; // the bordered button, which the menu joins
+                      setMenuFor((m) => (m?.id === f.id ? null : f)); // the same button again closes it
                     }}
                   >
                     <IconButton icon="more" label="Follow up actions" disabled={completing === f.id || removing === f.id} />
@@ -176,13 +176,15 @@ export default function FollowUpsPage() {
           <HistoryItem key={h.lead.id} name={h.lead.label} count={h.completedCount} entries={h.entries} />
         ))}
         {history.data?.items.length === 0 && <EmptyState>No completed follow-ups yet. They appear here once marked as completed.</EmptyState>}
-        <Pagination {...paging(history.data, "Leads", setHistoryPage)} />
+        {/* With the entries (the page's last row): under their placeholders it would jump when they arrive. The list's
+            own row above stays, so this section doesn't move down when it fills in. */}
+        {history.data && <Pagination {...paging(history.data, "Leads", setHistoryPage)} />}
       </section>
 
-      <Popover anchor={anchor} open={menuFor !== null} onClose={closeMenu} backdrop={false}>
-        <div role="menu" aria-label="Follow up actions" className="flex flex-col overflow-hidden rounded-[10px] border border-stroke2 bg-bg5 shadow-[0_8px_24px_rgb(21_46_175/0.12)]">
+      <Popover anchor={anchor} open={menuFor !== null} onClose={closeMenu} align="end">
+        <div role="menu" aria-label="Follow up actions" className="flex flex-col">
           {menuFor && menuFor.status !== "completed" && (
-            <button suppressHydrationWarning type="button" role="menuitem" autoFocus onClick={markCompleted} className={menuItem}>
+            <button suppressHydrationWarning type="button" role="menuitem" data-autofocus onClick={markCompleted} className={menuItem}>
               <Icon name="mark" size={18} />
               Mark As Completed
             </button>
@@ -191,7 +193,7 @@ export default function FollowUpsPage() {
             suppressHydrationWarning
             type="button"
             role="menuitem"
-            autoFocus={menuFor?.status === "completed"}
+            data-autofocus={menuFor?.status === "completed" || undefined}
             onClick={() => {
               setEditing(menuFor);
               closeMenu();
@@ -208,9 +210,9 @@ export default function FollowUpsPage() {
         </div>
       </Popover>
 
-      {/* Figma: "Add Follow - Up" ON_CLICK → New Follow Up (1:8040), TOP_CENTER, 50% backdrop, instant.
-          Sized for its two-column form at 14px text. */}
-      <Modal open={adding} onClose={closeModal} title="New Follow Up" className="w-[760px]" top>
+      {/* Figma: "Add Follow - Up" ON_CLICK → New Follow Up (1:8040), 50% backdrop, instant; centred like every dialog
+          (the Figma's TOP_CENTER left it stuck to the top of the screen). Sized for its two-column form at 14px text. */}
+      <Modal open={adding} onClose={closeModal} title="New Follow Up" className="w-[760px]">
         <NewFollowUpForm
           onCancel={closeModal}
           onSaved={() => {
@@ -219,7 +221,7 @@ export default function FollowUpsPage() {
           }}
         />
       </Modal>
-      <Modal open={editing !== null} onClose={closeEdit} title="Edit Follow Up" className="w-[760px]" top>
+      <Modal open={editing !== null} onClose={closeEdit} title="Edit Follow Up" className="w-[760px]">
         {editing && (
           <NewFollowUpForm
             followUp={editing}

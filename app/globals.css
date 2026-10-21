@@ -79,6 +79,14 @@ body {
   animation-timing-function: cubic-bezier(0, 0, 0.58, 1);
 }
 
+/* An open dropdown and its trigger read as one control (Popover in components/ui.tsx marks both with data-joined,
+   lib/place.ts decides which corners): the corners where they meet are square. Unlayered, so it beats the rounded-*
+   utilities on either side. */
+[data-joined~="tl"] { border-top-left-radius: 0; }
+[data-joined~="tr"] { border-top-right-radius: 0; }
+[data-joined~="bl"] { border-bottom-left-radius: 0; }
+[data-joined~="br"] { border-bottom-right-radius: 0; }
+
 /* Scroll without visible scrollbars (wheel / touch / keyboard still scroll) */
 * {
   scrollbar-width: none;

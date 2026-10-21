@@ -85,7 +85,7 @@ export function PhoneInput({ id, name, defaultValue, onChange, error }: {
 
   return (
     <>
-      <div ref={wrap} data-invalid={message ? true : undefined} className="flex min-h-10 w-full min-w-0 items-stretch rounded-[12px] border border-stroke2 bg-bg5 transition-[border-color,box-shadow] duration-200 focus-within:border-stroke focus-within:shadow-[0_0_0_3px_rgb(71_215_251/0.25)] data-invalid:border-danger data-invalid:focus-within:shadow-[0_0_0_3px_rgb(249_74_74/0.18)]">
+      <div ref={wrap} data-invalid={message ? true : undefined} className="flex min-h-10 w-full min-w-0 items-stretch overflow-hidden rounded-[12px] border border-stroke2 bg-bg5 transition-[border-color,box-shadow] duration-200 focus-within:border-stroke focus-within:shadow-[0_0_0_3px_rgb(71_215_251/0.25)] data-invalid:border-danger data-invalid:focus-within:shadow-[0_0_0_3px_rgb(249_74_74/0.18)]">
         <button
           suppressHydrationWarning
           ref={button}
@@ -93,12 +93,14 @@ export function PhoneInput({ id, name, defaultValue, onChange, error }: {
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={buttonLabel}
-          onClick={() => setOpen(true)}
-          className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-l-[12px] border-r border-stroke2 pr-2.5 pl-3 text-[14px] font-medium text-black outline-none hover:bg-[rgb(71_215_251/0.12)] focus-visible:bg-[rgb(71_215_251/0.2)]"
+          onClick={() => setOpen((o) => !o)}
+          className="flex shrink-0 cursor-pointer items-center gap-1.5 border-r border-stroke2 pr-2.5 pl-3 text-[14px] font-medium text-black outline-none hover:bg-[rgb(71_215_251/0.12)] focus-visible:bg-[rgb(71_215_251/0.2)]"
         >
           <span aria-hidden className="text-[18px] leading-none">{shown ? flag(shown) : "🌐"}</span>
           {!international && country && <span className="tabular-nums">+{callingCodeOf(country)}</span>}
-          <Icon name="arrow-right" size={14} className="rotate-90 text-nav" />
+          <span className={`flex transition-transform ${open ? "rotate-180" : ""}`}>
+            <Icon name="arrow-right" size={14} className="rotate-90 text-nav" />
+          </span>
         </button>
         <input
           suppressHydrationWarning
@@ -124,7 +126,7 @@ export function PhoneInput({ id, name, defaultValue, onChange, error }: {
         </p>
       )}
       <FieldError id={`${id}-error`} message={message} />
-      <Popover anchor={wrap} open={open} onClose={() => setOpen(false)} dy={44}>
+      <Popover anchor={wrap} open={open} onClose={() => setOpen(false)} fit>
         <CountryPicker
           selected={shown ?? country}
           onPick={pick}
@@ -165,11 +167,11 @@ function CountryPicker({ selected, onPick, onDismiss }: { selected?: CountryCode
   };
 
   return (
-    <div className="flex w-[min(340px,calc(100vw-16px))] flex-col overflow-hidden rounded-[12px] border border-stroke2 bg-primary shadow-[0_12px_32px_rgb(21_46_175/0.14)]">
+    <div className="flex w-full flex-col">
       <div className="border-b border-stroke2 p-2">
         <input
           suppressHydrationWarning
-          autoFocus
+          data-autofocus
           role="combobox"
           aria-expanded
           aria-controls={listId}

@@ -81,7 +81,8 @@ export default function LeadsTablePage() {
         </div>
       </div>
 
-      <Pagination {...paging(leads.data, "Leads", setPage)} />
+      {/* With the rows: under their placeholders it would jump when they arrive */}
+      {leads.data && <Pagination {...paging(leads.data, "Leads", setPage)} />}
 
       <EditLeadModal
         lead={editing}

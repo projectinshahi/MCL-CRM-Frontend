@@ -90,8 +90,8 @@ export default function CustomersPage() {
             />
             {/* Report: every customer matching the search and filters (all pages), as CSV */}
             <ToolButton label="Report" icon="download" busy={report.busy} onClick={() => report.run({ q, ...rest, createdFrom: daysAgo(created) })} />
-            <ToolButton label="Filter" icon="filter" btnRef={filterBtn} count={activeFilters(filter)} onClick={() => setFiltering(true)} />
-            <Popover anchor={filterBtn} open={filtering} onClose={closeFilter} dx={-38.2} dy={46}>
+            <ToolButton label="Filter" icon="filter" btnRef={filterBtn} count={activeFilters(filter)} onClick={() => setFiltering((f) => !f)} />
+            <Popover anchor={filterBtn} open={filtering} onClose={closeFilter} align="end">
               <FilterMenu
                 groups={groups}
                 value={filter}
@@ -154,7 +154,8 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        <Pagination {...paging(customers.data, "Customers", setPage)} />
+        {/* With the rows: under their placeholders it would jump when they arrive */}
+        {customers.data && <Pagination {...paging(customers.data, "Customers", setPage)} />}
       </section>
 
       <CustomerEditModal

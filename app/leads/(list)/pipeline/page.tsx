@@ -34,8 +34,8 @@ import { useLeads } from "@/components/leads/LeadsView";
 import { api, ApiError, cap, day, inr, useApi } from "@/lib/api";
 import { place, reconcile, type Column } from "@/lib/pipeline";
 
-const action = "flex h-7 items-center gap-1 rounded-[8px] border border-stroke2 bg-bg5 px-2 text-[12px] font-medium text-black transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
-const label = "text-center";
+// A card's actions are icons only, like its delete button: the name says what each does, and so does the tooltip.
+const action = "flex size-7 shrink-0 items-center justify-center rounded-[8px] border border-stroke2 bg-bg5 transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 // Cards are neutral surfaces on the column's tint (the saturated cyan made every pill on them hard to read); the
 // stage's colour is on its column header.
 const cardBox = "flex flex-col rounded-[12px] border border-stroke2 bg-primary p-3 shadow-[0_1px_2px_rgb(21_46_175/0.06)] transition-[border-color,box-shadow] hover:border-[#6e85e5] hover:shadow-[0_4px_14px_rgb(21_46_175/0.1)]";
@@ -431,7 +431,7 @@ const CardContents = memo(function CardContents({ lead: c, removing, onEdit, onR
               aria-haspopup="menu"
               aria-expanded={menu}
               title="Drag to another stage, or click to choose one"
-              onClick={() => openMenu(true)}
+              onClick={() => openMenu(!menu)}
               className={`${gripCls} cursor-grab transition-colors hover:bg-[rgb(71_215_251/0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`}
             >
               <Icon name="drag" size={16} className="text-nav" />
@@ -443,32 +443,29 @@ const CardContents = memo(function CardContents({ lead: c, removing, onEdit, onR
       </div>
       <div className="grid grid-rows-[0fr] opacity-0 transition-[grid-template-rows,opacity] group-focus-within:grid-rows-[1fr] group-focus-within:opacity-100 group-hover:grid-rows-[1fr] group-hover:opacity-100">
         <div className="overflow-hidden">
-          <div className="mt-2 flex items-center justify-between gap-1 border-t border-stroke2 pt-2">
-            <Link href={`/leads/${c.id}`} className={action}>
+          <div className="mt-2 flex items-center justify-center gap-4 border-t border-stroke2 pt-2">
+            <Link href={`/leads/${c.id}`} aria-label="View" title="View lead" className={action}>
               <Icon name="eye" size={16} className="text-nav" />
-              <span className={label}>View</span>
             </Link>
-            <button suppressHydrationWarning type="button" onClick={() => onEdit(c)} className={`${action} cursor-pointer`}>
+            <button suppressHydrationWarning type="button" aria-label="Edit" title="Edit lead" onClick={() => onEdit(c)} className={`${action} cursor-pointer`}>
               <Icon name="edit" size={16} className="text-nav" />
-              <span className={label}>Edit</span>
             </button>
             {/* Win: converts the lead into a customer (Leads and Customers access); a converted lead links to it instead */}
             {c.customer && !c.customer.deleted && canConvert ? (
-              <Link href={`/customers/${c.customer.id}`} className={action}>
+              <Link href={`/customers/${c.customer.id}`} aria-label="Customer" title={`Open customer ${c.customer.code}`} className={action}>
                 <Icon name="converted" size={16} className="text-nav" />
-                <span className={label}>Customer</span>
               </Link>
             ) : (
               <button
                 suppressHydrationWarning
                 type="button"
+                aria-label="Win"
                 disabled={!canConvert || !!c.customer}
                 title={c.customer ? `Its customer is ${c.customer.code}` : canConvert ? "Convert to a customer" : "Converting needs access to Customers"}
                 onClick={() => onConvert(c)}
                 className={`${action} cursor-pointer disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 <Icon name="arrow-right" size={16} className="text-nav" />
-                <span className={label}>Win</span>
               </button>
             )}
           </div>
@@ -516,8 +513,8 @@ function MoveMenu({ anchor, open, lead, stages, onClose, onPick }: {
   };
   const first = stages.find((s) => s.id !== lead.status.id)?.id;
   return (
-    <Popover anchor={anchor} open={open} onClose={onClose} dx={-152} dy={32} backdrop={false}>
-      <div role="menu" aria-label={`Move ${lead.title} to`} onKeyDown={keys} className="flex w-[180px] flex-col overflow-hidden rounded-[12px] border border-stroke2 bg-primary py-1 shadow-[0_8px_24px_rgb(0_0_0/0.12)]">
+    <Popover anchor={anchor} open={open} onClose={onClose} align="end">
+      <div role="menu" aria-label={`Move ${lead.title} to`} onKeyDown={keys} className="flex w-[180px] flex-col py-1">
         <p aria-hidden className="px-3.5 pt-2 pb-1 text-[12px] font-medium text-nav opacity-70">
           Move to stage
         </p>
@@ -529,7 +526,7 @@ function MoveMenu({ anchor, open, lead, stages, onClose, onPick }: {
               key={s.id}
               type="button"
               role="menuitem"
-              autoFocus={s.id === first}
+              data-autofocus={s.id === first || undefined}
               disabled={here}
               onClick={() => onPick(s)}
               className="flex h-9 w-full cursor-pointer items-center justify-between px-3.5 text-left text-[14px] text-nav hover:bg-bg5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus disabled:cursor-default disabled:text-selected disabled:hover:bg-transparent"

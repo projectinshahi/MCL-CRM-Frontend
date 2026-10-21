@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/feedback";
-import { PageHeader, Popover, SelectField, ToolButton } from "@/components/ui";
+import { Modal, ModalActions, PageHeader, Popover, SelectField, ToolButton } from "@/components/ui";
 import {
   BREAKDOWN_HEAD, BREAKDOWN_ROWS, BREAKDOWN_TOTAL, COUNTRIES, DOC_TYPES, RATE_CHART_REF, RATE_HEAD, RATE_ROWS,
   RATE_TOTAL, RECENT_CALCS, RECENT_HEAD, type Calc, type DocType,
@@ -107,13 +107,6 @@ export default function CalculatorPage() {
   const [menuId, setMenuId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Calc | null>(null);
   const set = (k: keyof Calc) => (v: string) => setDraft((d) => d && { ...d, [k]: v });
-  const editing = draft !== null;
-  useEffect(() => {
-    if (!editing) return;
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setDraft(null);
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }, [editing]);
 
   return (
     <div className="flex flex-col gap-4 p-4 sm:p-6">
@@ -230,7 +223,7 @@ export default function CalculatorPage() {
               aria-label="More actions"
               onClick={(e) => {
                 moreRef.current = e.currentTarget;
-                setMenuId(r.id);
+                setMenuId((m) => (m === r.id ? null : r.id)); // the same button again closes it
               }}
               className="mx-auto flex size-8 cursor-pointer items-center justify-center rounded-[8px] text-nav hover:bg-bg5"
             >
@@ -240,9 +233,9 @@ export default function CalculatorPage() {
         />
       </Card>
 
-      {/* ⋮ → Edit/Delete menu 1:8158: MANUAL overlay at (-131.39, 24.6) from the icon, 25% backdrop */}
-      <Popover anchor={moreRef} open={menuId !== null} onClose={() => setMenuId(null)} dx={-112} dy={36}>
-        <div className="flex w-[144px] flex-col overflow-hidden rounded-[12px] border border-stroke2 bg-bg5 text-[14px] text-nav shadow-[0_8px_24px_rgb(21_46_175/0.12)]">
+      {/* ⋮ → Edit/Delete menu 1:8158, hanging from the icon (right edges lined up) */}
+      <Popover anchor={moreRef} open={menuId !== null} onClose={() => setMenuId(null)} align="end">
+        <div className="flex w-[144px] flex-col text-[14px] text-nav">
           <button suppressHydrationWarning
             type="button"
             onClick={() => {
@@ -268,24 +261,11 @@ export default function CalculatorPage() {
         </div>
       </Popover>
 
-      {/* Edit overlay 1:8122: CENTER, 50% backdrop, closes on click outside / Esc, opens instantly */}
-      {draft && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/50 p-4" onMouseDown={() => setDraft(null)}>
-          <div
-            role="dialog"
-            aria-modal
-            aria-label="Edit"
-            onMouseDown={(e) => e.stopPropagation()}
-            className="flex max-h-[calc(100dvh-32px)] w-[720px] max-w-full flex-col items-end gap-5 overflow-y-auto rounded-[20px] border border-[#1e2834] bg-primary dark:border-stroke2 p-5 font-inter font-medium sm:p-6"
-          >
-            <div className="flex w-full flex-col gap-4">
-              <div className="flex items-center justify-between border-b border-stroke2 pb-4">
-                <h2 className="text-[20px] font-semibold text-black">Edit</h2>
-                {/* Figma's close glyph is white (1:8128) */}
-                <button suppressHydrationWarning type="button" aria-label="Close" onClick={() => setDraft(null)} className="flex size-8 cursor-pointer items-center justify-center rounded-[8px] text-white">
-                  <Icon name="close" size={20} />
-                </button>
-              </div>
+      {/* Edit overlay 1:8122 (Inter, dark stroke) on the shared dialog: page locked behind it, Escape, focus kept
+          inside, pinned title and buttons. Figma's close glyph was white on the light dialog: the shared one shows. */}
+      <Modal open={draft !== null} onClose={() => setDraft(null)} title="Edit" className="w-[720px] border-[#1e2834]! font-inter font-medium dark:border-stroke2!">
+        {draft && (
+          <>
               <div className="grid gap-x-3 gap-y-4 sm:grid-cols-2">
                 <EditField label="Date & Time">
                   <input suppressHydrationWarning value={draft.date} onChange={(e) => set("date")(e.target.value)} placeholder="eg,26 jul 2026, 10:34 pm" className={editInput} />
@@ -314,25 +294,16 @@ export default function CalculatorPage() {
               <EditField label="Tariff">
                 <input suppressHydrationWarning value={draft.tariff} onChange={(e) => set("tariff")(e.target.value)} placeholder="eg., ORD-20260..." className={editInput} />
               </EditField>
-            </div>
-            <div className="flex gap-2 text-[14px]">
-              <button suppressHydrationWarning type="button" onClick={() => setDraft(null)} className="h-10 cursor-pointer rounded-[12px] border border-[#00bdd7] bg-white px-4 text-black dark:bg-transparent">
-                Cancel
-              </button>
-              <button suppressHydrationWarning
-                type="button"
-                onClick={() => {
-                  setRecent((rs) => rs.map((r) => (r.id === draft.id ? draft : r)));
-                  setDraft(null);
-                }}
-                className="h-10 cursor-pointer rounded-[12px] bg-button px-4 text-white"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <ModalActions
+              onCancel={() => setDraft(null)}
+              onDone={() => {
+                setRecent((rs) => rs.map((r) => (r.id === draft.id ? draft : r)));
+                setDraft(null);
+              }}
+            />
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

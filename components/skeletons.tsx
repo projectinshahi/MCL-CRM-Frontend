@@ -35,11 +35,24 @@ export function SkeletonRows({ columns, rows = 6, twoLine = false, grow = false 
   return (
     <Loading>
       {Array.from({ length: rows }, (_, r) => (
-        <div key={r} className="flex items-center border-b border-stroke2 py-3">
+        // As tall as a data row (py-2.5 around a 32px action button), so the rows don't change height when data arrives.
+        <div key={r} className="flex items-center border-b border-stroke2 py-2.5">
           {columns.map((w, c) => (
-            <div key={c} className={`flex flex-col gap-1.5 pr-4 ${w === "flex" ? "min-w-0 flex-1" : "shrink-0"}`} style={size(w)}>
-              <Skeleton className="h-4" style={{ width: fill(r, c) }} />
-              {twoLine && c === 0 && <Skeleton className="h-3 w-1/2" />}
+            <div key={c} className={`flex min-h-8 flex-col justify-center gap-0.5 pr-4 ${w === "flex" ? "min-w-0 flex-1" : "shrink-0"}`} style={size(w)}>
+              {twoLine && c === 0 ? (
+                // Each bar takes a line of the text it stands for (a 14px line over a 13px one, 2px apart, as in the
+                // follow-ups rows), so two-line rows are as tall as the data too.
+                <>
+                  <span className="flex h-lh items-center text-[14px]">
+                    <Skeleton className="h-4" style={{ width: fill(r, c) }} />
+                  </span>
+                  <span className="flex h-lh items-center text-[13px]">
+                    <Skeleton className="h-3 w-1/2" />
+                  </span>
+                </>
+              ) : (
+                <Skeleton className="h-4" style={{ width: fill(r, c) }} />
+              )}
             </div>
           ))}
         </div>

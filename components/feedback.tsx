@@ -26,9 +26,13 @@ type ConfirmOptions = { title: string; message: ReactNode; confirmLabel: string;
 
 const ToastCtx = createContext<ToastApi | null>(null);
 const ConfirmCtx = createContext<((o: ConfirmOptions) => Promise<boolean>) | null>(null);
+const DismissCtx = createContext<() => void>(() => {});
 
 export const useToast = () => use(ToastCtx)!;
 export const useConfirm = () => use(ConfirmCtx)!;
+/** Answers an open confirmation "no" and closes it: Shell calls it on every page change, so a question asked by one
+ *  page never stays open over the next (where pressing its button would act on the page that was left). */
+export const useDismissConfirm = () => use(DismissCtx);
 
 /** Queue a toast for the next page load (used right before a full-page redirect). */
 export { flash } from "@/lib/api";
@@ -179,12 +183,25 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   }, [show]);
 
   // ---------- confirmation dialog ----------
-  const [confirmState, setConfirmState] = useState<(ConfirmOptions & { resolve: (ok: boolean) => void }) | null>(null);
-  const confirm = useCallback((o: ConfirmOptions) => new Promise<boolean>((resolve) => setConfirmState({ ...o, resolve })), []);
-  const settle = (ok: boolean) => {
-    confirmState?.resolve(ok);
+  const [confirmState, setConfirmState] = useState<ConfirmOptions | null>(null);
+  const answer = useRef<((ok: boolean) => void) | null>(null); // the open question's promise
+  const settle = useCallback((ok: boolean) => {
+    answer.current?.(ok);
+    answer.current = null;
     setConfirmState(null);
-  };
+  }, []);
+  const confirm = useCallback(
+    (o: ConfirmOptions) =>
+      new Promise<boolean>((resolve) => {
+        answer.current?.(false); // a question still open is answered "no" rather than left hanging
+        answer.current = resolve;
+        setConfirmState(o);
+      }),
+    [],
+  );
+  const dismiss = useCallback(() => {
+    if (answer.current) settle(false);
+  }, [settle]);
 
   const hover = (id: number, tone: Tone) => (hovering: boolean) =>
     hovering ? clearTimeout(timers.current.get(id)) : schedule(id, tone);
@@ -201,6 +218,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx value={api}>
       <ConfirmCtx value={confirm}>
+      <DismissCtx value={dismiss}>
         {children}
         {/* Bottom-right on desktop, bottom full-width on phones: clear of page headers and primary actions. */}
         <section aria-label="Notifications" className="pointer-events-none fixed inset-x-4 bottom-4 z-[60] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 sm:bottom-6">
@@ -221,7 +239,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
                 <button
                   suppressHydrationWarning
                   type="button"
-                  autoFocus
+                  data-autofocus
                   onClick={() => settle(true)}
                   className={`h-10 cursor-pointer rounded-[12px] px-4 text-[14px] font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${confirmState.danger ? "bg-danger" : "bg-button"}`}
                 >
@@ -231,6 +249,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
             </>
           )}
         </Modal>
+      </DismissCtx>
       </ConfirmCtx>
     </ToastCtx>
   );

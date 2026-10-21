@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./Icon";
+import { place } from "@/lib/place";
 import { LABEL_TONE, stageTone, type StatusTone } from "@/lib/status";
 
 // Every <button>/<input>/<textarea>/<select> in the app carries suppressHydrationWarning: browser extensions
@@ -226,7 +227,7 @@ export function Pagination({ label, pages = 4, page: current, onPage }: { label:
 // Open overlays, innermost last. Escape closes only the top one: a dropdown inside a form closes and the form stays
 // open with what was typed (every overlay used to close at once).
 const layers: object[] = [];
-function useEscape(open: boolean, onClose: () => void) {
+export function useEscape(open: boolean, onClose: () => void) {
   const close = useRef(onClose);
   useEffect(() => {
     close.current = onClose;
@@ -246,7 +247,11 @@ function useEscape(open: boolean, onClose: () => void) {
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** Keyboard focus moves into `box` when `open` turns true and goes back to whatever had it when it closes. */
+/**
+ * Keyboard focus moves into `box` when `open` turns true and goes back to whatever had it when it closes. It lands on
+ * the box's [data-autofocus] element if there is one, else on `first(box)`. Popups mark that element instead of using
+ * React's autoFocus, which moves focus before this notes where it was, leaving nothing to go back to.
+ */
 function useFocusReturn(open: boolean, box: RefObject<HTMLElement | null>, first: (el: HTMLElement) => HTMLElement | null) {
   const pick = useRef(first);
   useEffect(() => {
@@ -256,7 +261,11 @@ function useFocusReturn(open: boolean, box: RefObject<HTMLElement | null>, first
     if (!open) return;
     const opener = document.activeElement as HTMLElement | null;
     const el = box.current;
-    if (el && !el.contains(document.activeElement)) pick.current(el)?.focus({ preventScroll: true }); // unless something inside took it (autoFocus)
+    if (el && !el.contains(document.activeElement)) {
+      const marked = el.querySelector<HTMLElement>("[data-autofocus]");
+      if (marked) marked.focus(); // scrolled into view in a long list, as autoFocus would
+      else pick.current(el)?.focus({ preventScroll: true });
+    }
     return () => {
       // Only when focus was left inside (or dropped with the closed overlay): a deliberate move elsewhere stays.
       const lost = !document.activeElement || document.activeElement === document.body || el?.contains(document.activeElement);
@@ -265,19 +274,53 @@ function useFocusReturn(open: boolean, box: RefObject<HTMLElement | null>, first
   }, [open, box]);
 }
 
-// Figma overlay: CENTER (or TOP_CENTER), black 50% backdrop, close on click outside, instant.
-export function Modal({ open, onClose, title, children, className = "w-[560px]", top = false }: {
+// Visited pages stay mounted, hidden, so Back / Forward shows them as they were (cacheComponents), popups included.
+// A popup still open on a page that was left is closed when that page shows again, before it is painted: always for a
+// dropdown or menu, and for a dialog unless something was typed or picked in it (that one stays, input and all).
+let navigations = 0;
+/** The Shell calls this on every change of page. */
+export const noteNavigation = () => void navigations++;
+
+function useCloseOnReturn(open: boolean, close: () => void, editedRef?: RefObject<boolean>) {
+  const done = useRef(close);
+  useEffect(() => {
+    done.current = close;
+  });
+  const openedAt = useRef<number | null>(null);
+  // Runs when the popup opens and again whenever its hidden page is shown (layout effects are set up anew then).
+  useLayoutEffect(() => {
+    if (!open) {
+      openedAt.current = null;
+      return;
+    }
+    if (openedAt.current === null) {
+      openedAt.current = navigations;
+      if (editedRef) editedRef.current = false;
+    } else if (openedAt.current !== navigations) {
+      if (editedRef?.current) openedAt.current = navigations;
+      else done.current();
+    }
+  }, [open, editedRef]);
+}
+
+// Figma overlay: black 50% backdrop over the whole window, header and sidebar included; close on click outside,
+// instant; the dialog is centred in the window. Rendered at the end of <body> (like the dropdowns), so no ancestor's
+// stacking or transform can put it under the header or the sidebar. Nothing behind it scrolls meanwhile (the window
+// never scrolls, and the page is a scroller of its own that nothing here chains into), and the dialog's own scrolling
+// never carries over.
+export function Modal({ open, onClose, title, children, className = "w-[560px]" }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   className?: string;
-  top?: boolean;
 }) {
   useEscape(open, onClose);
   const box = useRef<HTMLDivElement>(null);
   // The dialog itself takes focus on open (screen readers announce its title; the next Tab reaches the first control).
   useFocusReturn(open, box, (el) => el);
+  const edited = useRef(false); // something typed or picked since it opened
+  useCloseOnReturn(open, onClose, edited);
   if (!open) return null;
   // Tab and Shift+Tab wrap inside the dialog. Focus in a dropdown (rendered outside it) is left to that dropdown.
   const keepFocusInside = (e: React.KeyboardEvent) => {
@@ -295,8 +338,17 @@ export function Modal({ open, onClose, title, children, className = "w-[560px]",
       first.focus();
     }
   };
-  return (
-    <div className={`fixed inset-0 z-50 flex justify-center bg-scrim/50 p-4 ${top ? "items-start" : "items-center"}`} onMouseDown={onClose}>
+  return createPortal(
+    // data-backdrop: a press here while one of its dropdowns is open closes only the dropdown (Popover). A press that
+    // closes the dialog leaves focus alone (preventDefault), so it goes back to the dialog's opener, not to the page.
+    <div
+      data-backdrop
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/50 p-4"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
       <div
         ref={box}
         role="dialog"
@@ -305,7 +357,14 @@ export function Modal({ open, onClose, title, children, className = "w-[560px]",
         tabIndex={-1}
         onKeyDown={keepFocusInside}
         onMouseDown={(e) => e.stopPropagation()}
-        className={`relative flex max-h-[calc(100dvh-32px)] max-w-full flex-col gap-5 overflow-y-auto rounded-[20px] border border-stroke2 bg-primary p-5 outline-none sm:p-6 ${className}`}
+        // Typed into a field, or picked from one of its dropdowns (rendered outside, but their events come here)
+        onChange={() => {
+          edited.current = true;
+        }}
+        onClick={(e) => {
+          if ((e.target as Element).closest?.("[role=option]")) edited.current = true;
+        }}
+        className={`relative flex max-h-[calc(100dvh-32px)] max-w-full flex-col gap-5 overflow-y-auto overscroll-contain rounded-[20px] border border-stroke2 bg-primary p-5 outline-none sm:p-6 ${className}`}
       >
         {/* Pinned while a long form scrolls under it (the close button with it); ModalActions is pinned at the bottom. */}
         <div className="sticky -top-5 z-10 -mx-5 -mt-5 flex w-auto items-center justify-between gap-4 border-b border-stroke2 bg-primary px-5 py-4 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6">
@@ -322,7 +381,8 @@ export function Modal({ open, onClose, title, children, className = "w-[560px]",
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -354,69 +414,109 @@ export function ModalActions({ onCancel, onDone, doneLabel = "Done", pending = f
   );
 }
 
-// Figma overlay: MANUAL position relative to the trigger, optional 25% backdrop, close on click outside.
-export function Popover({ anchor, open, onClose, dx = 0, dy = 0, backdrop = true, children }: {
+/**
+ * A dropdown menu joined to its trigger (lib/place.ts): under it, or above when there is no room below, their borders
+ * overlapping into one line and the corners where they meet squared (data-joined on both, app/globals.css), so the
+ * two read as one control. Its left (`start`) or right (`end`) edge lines up with the trigger's; `fit` makes it
+ * exactly as wide as the trigger (a form field). The wrapper is the menu's box for every dropdown: the panels inside
+ * bring only their content. It stays attached while the page or a dialog
+ * scrolls, the window resizes or its content changes size, and closes once its trigger is out of sight (scrolled
+ * away, or under a dialog's pinned header or footer). Nothing covers the rest of the app: the trigger is never
+ * dimmed, a dialog under the menu goes on scrolling, and a press elsewhere closes the menu and still lands where it
+ * was aimed, except on a dialog's backdrop, where it closes only the menu.
+ */
+export function Popover({ anchor, open, onClose, align = "start", fit = false, children }: {
   anchor: RefObject<HTMLElement | null>;
   open: boolean;
   onClose: () => void;
-  dx?: number;
-  dy?: number;
-  backdrop?: boolean;
+  align?: "start" | "end";
+  fit?: boolean;
   children: ReactNode;
 }) {
   useEscape(open, onClose);
-  useEffect(() => {
-    if (!open) return;
-    window.addEventListener("resize", onClose);
-    return () => window.removeEventListener("resize", onClose);
-  }, [open, onClose]);
   // Keyboard users land on the first option (the panel is rendered at the end of the page, out of Tab reach) and
   // return to the trigger when it closes.
   const panel = useRef<HTMLDivElement | null>(null);
   useFocusReturn(open, panel, (el) => el.querySelector<HTMLElement>(FOCUSABLE));
+  useCloseOnReturn(open, onClose);
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
+  // Placed before the first paint (no flash in a corner), then again on every scroll, resize and size change.
+  useLayoutEffect(() => {
+    const el = panel.current;
+    if (!open || !el) return;
+    // The trigger whose corners are squared right now; unmarked when the menu closes or the anchor moves elsewhere.
+    let joined: HTMLElement | null = null;
+    const unjoin = () => joined?.removeAttribute("data-joined");
+    const position = () => {
+      const trigger = anchor.current;
+      if (trigger !== joined) unjoin();
+      if (!trigger) return;
+      const r = trigger.getBoundingClientRect();
+      const seen = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2).find((x) => !el.contains(x));
+      if (!seen || !trigger.contains(seen)) return close.current();
+      el.style.maxHeight = "";
+      if (fit) el.style.width = `${r.width}px`;
+      const size = { width: fit ? r.width : el.offsetWidth, height: el.offsetHeight };
+      const spot = place(r, size, { width: innerWidth, height: innerHeight }, align);
+      el.style.top = `${spot.top}px`;
+      el.style.left = `${spot.left}px`;
+      el.style.maxHeight = spot.maxHeight ? `${spot.maxHeight}px` : "";
+      el.style.overflowY = spot.maxHeight ? "auto" : "";
+      el.toggleAttribute("data-up", spot.up);
+      el.setAttribute("data-joined", spot.join.menu.join(" "));
+      trigger.setAttribute("data-joined", spot.join.trigger.join(" "));
+      joined = trigger;
+    };
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(position);
+    };
+    const outside = (e: PointerEvent) => {
+      const target = e.target as Element;
+      if (el.contains(target) || anchor.current?.contains(target)) return; // the trigger toggles the menu itself
+      // On the dim itself no mousedown follows, so the dialog stays open; a press on another field of the dialog goes
+      // ahead (focus, caret).
+      if (target.matches?.("[data-backdrop]")) e.preventDefault();
+      close.current();
+    };
+    position();
+    const resized = new ResizeObserver(update);
+    resized.observe(el);
+    document.addEventListener("pointerdown", outside, true);
+    window.addEventListener("scroll", update, true); // any scroller: the page, a dialog, a table
+    window.addEventListener("resize", update);
+    return () => {
+      cancelAnimationFrame(frame);
+      unjoin();
+      resized.disconnect();
+      document.removeEventListener("pointerdown", outside, true);
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open, anchor, align, fit]);
   if (!open) return null;
-  // Position is read from the trigger when the panel mounts (no extra render pass).
-  const place = (el: HTMLDivElement | null) => {
-    panel.current = el;
-    const r = el && anchor.current?.getBoundingClientRect();
-    if (!el || !r) return;
-    el.style.left = `${Math.max(8, Math.min(r.left + dx, window.innerWidth - el.offsetWidth - 8))}px`;
-    // Below the trigger, or above it when it doesn't fit below and there is more room above (a dropdown near the
-    // bottom of the screen or of a dialog). Whatever doesn't fit either way scrolls inside the panel.
-    const gap = Math.max(0, dy - r.height);
-    const below = window.innerHeight - (r.top + dy) - 8;
-    const above = r.top - gap - 8;
-    const up = el.offsetHeight > below && above > below;
-    const room = up ? above : below;
-    if (el.offsetHeight > room) {
-      el.style.maxHeight = `${Math.max(room, 120)}px`;
-      el.style.overflowY = "auto";
-    }
-    el.style.top = `${up ? Math.max(8, r.top - gap - Math.min(el.offsetHeight, room)) : r.top + dy}px`;
-  };
-  // Portal to <body>: keeps the overlay out of any ancestor <label> (whose activation would
-  // re-click the trigger) and out of scroll/stacking contexts such as modal bodies.
+  // Portal to <body>: keeps the menu out of any ancestor <label> (whose activation would re-click the trigger) and
+  // out of clipping and stacking contexts such as dialog bodies and table scrollers. Later in <body> than an open
+  // dialog, so it is drawn above it.
   return createPortal(
-    <div className={`fixed inset-0 z-50 ${backdrop ? "bg-scrim/25" : ""}`} onMouseDown={onClose} onWheel={onClose}>
-      <div
-        ref={place}
-        className="fixed overscroll-contain"
-        onMouseDown={(e) => e.stopPropagation()}
-        // Tab closes the panel and puts focus back on its trigger (the panel sits at the end of the page, so the
-        // browser's own Tab would jump elsewhere); the next Tab carries on from the trigger.
-        onKeyDown={(e) => {
-          if (e.key !== "Tab" || e.defaultPrevented) return;
-          e.preventDefault();
-          onClose();
-        }}
-        // Scrolling a list inside the panel scrolls the list; any other wheel still closes the panel (it would drift from its trigger).
-        onWheel={(e) => {
-          for (let el = e.target as HTMLElement | null; el && el !== e.currentTarget.parentElement; el = el.parentElement)
-            if (el.scrollHeight > el.clientHeight) return e.stopPropagation();
-        }}
-      >
-        {children}
-      </div>
+    <div
+      ref={panel}
+      // The shared menu box. Its shadow falls away from the trigger (down, or up when it opens above), never onto it.
+      className="fixed z-50 overflow-hidden overscroll-contain rounded-[12px] border border-stroke2 bg-primary shadow-[0_16px_24px_-8px_rgb(21_46_175/0.16)] data-up:shadow-[0_-16px_24px_-8px_rgb(21_46_175/0.16)]"
+      onMouseDown={(e) => e.stopPropagation()}
+      // Tab closes the panel and puts focus back on its trigger (the panel sits at the end of the page, so the
+      // browser's own Tab would jump elsewhere); the next Tab carries on from the trigger.
+      onKeyDown={(e) => {
+        if (e.key !== "Tab" || e.defaultPrevented) return;
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      {children}
     </div>,
     document.body,
   );
@@ -436,7 +536,7 @@ export function FilterMenu({ groups, value, onPick }: { groups: FilterGroup[]; v
   const [open, setOpen] = useState<string | null>(groups.length === 1 ? groups[0].key : null);
   const chosen = groups.filter((g) => value[g.key]);
   return (
-    <div className="flex w-[220px] flex-col divide-y-[0.5px] divide-stroke2 overflow-hidden rounded-[12px] border border-stroke2 bg-primary shadow-[0_8px_24px_rgb(21_46_175/0.12)]">
+    <div className="flex w-[220px] flex-col divide-y-[0.5px] divide-stroke2">
       {groups.map(({ key, label, options }) => {
         // Each group says what is chosen in it, so the menu reads as the current filter at a glance.
         const current = options.find((o) => o.value === value[key])?.label;
@@ -545,7 +645,6 @@ export function SelectField({ value, options, onChange, placeholder, display, se
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [width, setWidth] = useState(0);
   const items = options.map((o) => (typeof o === "string" ? { value: o, label: o } : o));
   const shown = display ?? items.find((o) => o.value === value)?.label ?? value;
   const moveFocus = (e: React.KeyboardEvent<HTMLElement>) => {
@@ -562,17 +661,18 @@ export function SelectField({ value, options, onChange, placeholder, display, se
         ref={ref}
         type="button"
         data-invalid={invalid || undefined}
-        onClick={() => {
-          setWidth(ref.current?.offsetWidth ?? 0);
-          setOpen(true);
-        }}
+        onClick={() => setOpen((o) => !o)}
         className={`${inputCls} flex cursor-pointer items-center justify-between text-left data-invalid:border-danger ${className}`}
       >
         <span className={shown ? "" : "opacity-50"}>{shown || placeholder}</span>
-        <Icon name={icon} size={iconSize} className={iconClass} />
+        {/* Points up while the list is open */}
+        <span className={`flex transition-transform ${open ? "rotate-180" : ""}`}>
+          <Icon name={icon} size={iconSize} className={iconClass} />
+        </span>
       </button>
-      <Popover anchor={ref} open={open} onClose={() => setOpen(false)} dy={44}>
-        <div className="overflow-hidden rounded-[12px] border border-stroke2 bg-primary shadow-[0_8px_24px_rgb(21_46_175/0.12)]" style={{ width }}>
+      {/* Exactly as wide as the field, joined to it */}
+      <Popover anchor={ref} open={open} onClose={() => setOpen(false)} fit>
+        <>
           {onSearch && (
             <input
               suppressHydrationWarning
@@ -601,7 +701,7 @@ export function SelectField({ value, options, onChange, placeholder, display, se
                     type="button"
                     role="option"
                     aria-selected={chosen}
-                    autoFocus={chosen && !onSearch}
+                    data-autofocus={(chosen && !onSearch) || undefined}
                     onClick={() => {
                       onChange(o.value);
                       setOpen(false);
@@ -616,7 +716,7 @@ export function SelectField({ value, options, onChange, placeholder, display, se
             })}
           </ul>
           {onSearch && !items.length && <p className="px-3.5 py-2 text-[13px] text-nav opacity-70">No matches</p>}
-        </div>
+        </>
       </Popover>
     </>
   );
