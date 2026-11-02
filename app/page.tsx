@@ -1,11 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Icon, type IconName } from "@/components/Icon";
+import { PeriodPicker } from "@/components/PeriodPicker";
 import { Loading, Skeleton } from "@/components/skeletons";
-import { LoadFailed } from "@/components/ui";
+import { LoadFailed, StageDot } from "@/components/ui";
 import { useApi } from "@/lib/api";
+import { daysLabel, periodQuery, todayIST, type Period } from "@/lib/period";
 
+type Stage = { id: string; name: string; isWon: boolean; isLost: boolean };
 type Summary = {
+  period: { from: string; to: string } | null; // the days the lead figures cover; null = all time
   kpis: {
     totalLeads: number;
     newLeads: number;
@@ -19,7 +24,7 @@ type Summary = {
     convertedValue: number;
     conversionRate: number;
   };
-  byStatus: { status: { id: string; name: string }; count: number }[];
+  byStatus: { status: Stage; count: number }[]; // every configured stage, in pipeline order, zero counts included
   bySource: { source: { id: string; name: string } | null; count: number; share: number }[];
 };
 
@@ -46,6 +51,53 @@ function StatCard({ label, value, caption, icon }: { label: string; value: strin
       </div>
       <Icon name={icon} size={26} className="shrink-0 text-nav" />
     </div>
+  );
+}
+
+// One card per lead stage configured in Settings (the pipeline's columns, in their order): a stage added or renamed
+// there shows here as it is, and one with no leads in the period shows 00. Shaped like the cards above, with the
+// stage's colour dot (the same on every screen) where they have an icon.
+const STAGE_PLACEHOLDERS = 6; // the stages a new installation starts with
+// As many 140px+ columns as fit (seven across a 1366px screen), the cards sharing the row; more stages wrap.
+const GRID = "grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4";
+
+function StageCards({ rows, total }: { rows: Summary["byStatus"] | null; total: number }) {
+  const card = "flex min-w-0 flex-col gap-1 rounded-[16px] border border-stroke2 bg-primary px-4 py-3.5";
+  return (
+    <section aria-labelledby="by-stage" className="flex flex-col gap-3">
+      <h2 id="by-stage" className="text-[16px] font-semibold tracking-[-0.32px] text-black">
+        Leads by Status
+      </h2>
+      {!rows ? (
+        <Loading className={GRID} label="Loading the leads by status…">
+          {Array.from({ length: STAGE_PLACEHOLDERS }, (_, i) => (
+            <div key={i} className={card}>
+              <Skeleton className="my-0.5 h-4 w-24" />
+              <Skeleton className="my-0.5 h-6 w-12" />
+              <Skeleton className="my-px h-3.5 w-20" />
+            </div>
+          ))}
+        </Loading>
+      ) : (
+        <ul className={GRID}>
+          {rows.map(({ status, count: n }) => (
+            <li key={status.id} className={card}>
+              <p className="flex min-w-0 items-start gap-2 text-[13px] font-medium text-nav">
+                {/* On the first line of a name that wraps */}
+                <span className="flex h-lh items-center">
+                  <StageDot status={status} />
+                </span>
+                <span className="line-clamp-2 break-words opacity-80" title={status.name}>
+                  {status.name}
+                </span>
+              </p>
+              <p className="text-[24px] leading-7 font-bold text-black">{count(n)}</p>
+              <p className="text-[12px] text-nav opacity-70">{total ? Math.round((n / total) * 1000) / 10 : 0}% of leads</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -161,15 +213,30 @@ function LeadSources({ rows: data }: { rows: Summary["bySource"] | null }) {
   );
 }
 
+/** Whether the days an answer covers are the chosen period's (all time: none; last N days: N days ending today). */
+function covers(days: Summary["period"], period: Period) {
+  if (period === null || days === null) return period === days;
+  if ("from" in period) return days.from === period.from && days.to === period.to;
+  return days.to === todayIST() && (Date.parse(days.to) - Date.parse(days.from)) / 86_400_000 + 1 === period.days;
+}
+
 export default function DashboardPage() {
-  const summary = useApi<Summary>("/dashboard/summary");
-  const data = summary.data;
+  // The lead figures cover the leads created in this period (all time to start with); customers and follow-ups are
+  // today's figures whatever it is. A new period refetches; the previous one's request is cancelled.
+  const [period, setPeriod] = useState<Period>(null);
+  const summary = useApi<Summary>("/dashboard/summary", periodQuery(period));
+  // A failed load shows no figures, rather than another period's
+  const data = summary.error ? null : summary.data;
+  // Figures for another period (a new choice, or Try again after a failure) stay, dimmed and busy, until the answer
+  // for this one arrives: the answer says which days it covers.
+  const refreshing = !!data && !covers(data.period, period);
   const k = data?.kpis;
-  // Until the first answer every figure is a placeholder (null); after a failed first load, the "no value" mark.
+  // Until the first answer every figure is a placeholder (null); after a failed load, the "no value" mark.
   const fig = (f: (k: Summary["kpis"]) => string) => (k ? f(k) : summary.error ? "------" : null);
+  const covered = period === null ? "All time" : data?.period && !refreshing ? daysLabel(data.period.from, data.period.to) : "Loading…";
   const rows: { label: string; value: string | null; caption: string; icon: IconName }[][] = [
     [
-      { label: "Total Leads", value: fig((k) => count(k.totalLeads)), caption: "All time", icon: "chart" },
+      { label: "Total Leads", value: fig((k) => count(k.totalLeads)), caption: covered, icon: "chart" },
       { label: "New Leads", value: fig((k) => count(k.newLeads)), caption: "Awaiting Contact", icon: "won" },
       { label: "Active Leads", value: fig((k) => count(k.activeLeads)), caption: "In Kanban", icon: "active" },
       { label: "Converted", value: fig((k) => count(k.convertedLeads)), caption: "Leads Won", icon: "converted" },
@@ -189,18 +256,24 @@ export default function DashboardPage() {
   const [row1, row2, row3] = rows;
   return (
     <div className="flex flex-col gap-4 p-4 sm:p-6">
-      {!data && summary.error && <LoadFailed what="dashboard figures" onRetry={summary.reload} />}
-      {[row1!, row2!].map((row, i) => (
-        <div key={i} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {row.map((s) => <StatCard key={s.label} {...s} />)}
-        </div>
-      ))}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {row3!.map((s) => <StatCard key={s.label} {...s} />)}
+      <div className="flex justify-end">
+        <PeriodPicker value={period} onChange={setPeriod} />
       </div>
-      <div className="flex flex-col items-start gap-4 xl:flex-row">
-        <LeadsTrend rows={data?.byStatus ?? (summary.error ? [] : null)} />
-        <LeadSources rows={data?.bySource ?? (summary.error ? [] : null)} />
+      {summary.error && <LoadFailed what="dashboard figures" onRetry={summary.reload} />}
+      <div aria-busy={refreshing || undefined} className={`flex flex-col gap-4 transition-opacity ${refreshing ? "opacity-60" : ""}`}>
+        {[row1!, row2!].map((row, i) => (
+          <div key={i} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {row.map((s) => <StatCard key={s.label} {...s} />)}
+          </div>
+        ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {row3!.map((s) => <StatCard key={s.label} {...s} />)}
+        </div>
+        <StageCards rows={data?.byStatus ?? (summary.error ? [] : null)} total={k?.totalLeads ?? 0} />
+        <div className="flex flex-col items-start gap-4 xl:flex-row">
+          <LeadsTrend rows={data?.byStatus ?? (summary.error ? [] : null)} />
+          <LeadSources rows={data?.bySource ?? (summary.error ? [] : null)} />
+        </div>
       </div>
     </div>
   );

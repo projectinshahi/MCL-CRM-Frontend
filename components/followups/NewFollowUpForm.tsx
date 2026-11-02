@@ -1,9 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/feedback";
-import { Field, ModalActions, SelectField, TextArea } from "@/components/ui";
+import { DateField, Field, ModalActions, SelectField, TextArea } from "@/components/ui";
 import { api, fieldErrors, useApi, useDebounced } from "@/lib/api";
 
 export type FollowUp = {
@@ -21,39 +20,6 @@ export type FollowUp = {
 
 export const TYPE_LABEL: Record<FollowUp["type"], string> = { whatsapp: "WhatsApp", call: "Call", email: "Email", meeting: "Meeting" };
 const TYPES = Object.entries(TYPE_LABEL) as [FollowUp["type"], string][];
-
-// "2026-10-13" → "13/10/2026" (en-IN, like the table)
-const fmt = (iso: string) => {
-  const [y, m, d] = iso.split("-");
-  return `${+d!}/${+m!}/${y}`;
-};
-
-// Figma 1:8057 look ("00/00/0000" + calendar icon); clicking opens the native date picker.
-function DateField({ value, onChange, invalid }: { value: string; onChange: (v: string) => void; invalid?: boolean }) {
-  const ref = useRef<HTMLInputElement>(null);
-  return (
-    <div className="relative">
-      <button suppressHydrationWarning
-        type="button"
-        onClick={() => ref.current?.showPicker()}
-        data-invalid={invalid || undefined}
-        className="flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-[12px] border border-stroke2 bg-bg5 px-3.5 py-[9px] text-left text-[14px] leading-5 font-medium text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-invalid:border-danger"
-      >
-        <span className={`flex-1 ${value ? "" : "opacity-50"}`}>{value ? fmt(value) : "00/00/0000"}</span>
-        <Icon name="calendar" size={16} className="text-nav" />
-      </button>
-      <input suppressHydrationWarning
-        ref={ref}
-        type="date"
-        tabIndex={-1}
-        aria-hidden
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="pointer-events-none absolute bottom-0 left-0 h-px w-full opacity-0"
-      />
-    </div>
-  );
-}
 
 // Figma 1:8040 "New Follow Up" form body (header + X come from <Modal>). With `followUp` it edits that one instead:
 // filled in, its lead fixed (a follow-up stays on its lead), and only the changed assignee is sent.

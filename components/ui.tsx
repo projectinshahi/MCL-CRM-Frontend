@@ -625,6 +625,41 @@ export function TextArea(props: React.ComponentProps<"textarea">) {
   return <textarea suppressHydrationWarning {...props} className={`${inputCls} h-20 resize-none ${props.className ?? ""}`} />;
 }
 
+// "2026-10-13" → "13/10/2026" (en-IN, like the tables)
+const indiaDay = (iso: string) => {
+  const [y, m, d] = iso.split("-");
+  return `${+d!}/${+m!}/${y}`;
+};
+
+// Figma 1:8057 look ("00/00/0000" + calendar icon); clicking opens the native date picker (limited to min…max).
+export function DateField({ value, onChange, invalid, min, max }: { value: string; onChange: (v: string) => void; invalid?: boolean; min?: string; max?: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="relative">
+      <button suppressHydrationWarning
+        type="button"
+        onClick={() => ref.current?.showPicker()}
+        data-invalid={invalid || undefined}
+        className="flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-[12px] border border-stroke2 bg-bg5 px-3.5 py-[9px] text-left text-[14px] leading-5 font-medium text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-invalid:border-danger"
+      >
+        <span className={`flex-1 ${value ? "" : "opacity-50"}`}>{value ? indiaDay(value) : "00/00/0000"}</span>
+        <Icon name="calendar" size={16} className="text-nav" />
+      </button>
+      <input suppressHydrationWarning
+        ref={ref}
+        type="date"
+        tabIndex={-1}
+        aria-hidden
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(e.target.value)}
+        className="pointer-events-none absolute bottom-0 left-0 h-px w-full opacity-0"
+      />
+    </div>
+  );
+}
+
 // Dropdown field: input-styled trigger + designed option list (Figma 1:7760 / 1:7751 style). Options are plain
 // strings, or { value, label } when labels can repeat (two leads or users with the same name): those are told apart
 // by value, never by label. `display` overrides the trigger's text (e.g. while the options are still loading).

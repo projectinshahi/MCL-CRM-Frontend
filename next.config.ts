@@ -35,6 +35,9 @@ export default function config(phase: string): NextConfig {
     },
     cacheComponents: true,
     partialPrefetching: true,
+    // Next.js's upgrade tooling (`next upgrade --agent`) and its build-time notices about advisories follow this policy:
+    // security releases only. It is Next's default, written down by the 16.4.3 security upgrade.
+    experimental: { agentUpgrade: "security" },
     turbopack: {
       rules: {
         "*.css": {
