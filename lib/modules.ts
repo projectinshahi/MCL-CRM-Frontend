@@ -25,6 +25,13 @@ export const MODULES: Module[] = [
       { label: "Settings", icon: "settings-nav", href: "/settings", perm: "settings" },
     ],
   },
+  {
+    key: "operations",
+    name: "Operations",
+    icon: "truck",
+    access: "Shipments, Excel import",
+    pages: [{ label: "All Operations", icon: "truck", href: "/operations", perm: "operations" }],
+  },
   { key: "bde", name: "BDE", icon: "call", access: "Dashboard, Leads, Follow Ups", pages: [] },
   { key: "finance", name: "Finance", icon: "bitcoin-card", access: "Dashboard, Leads, Follow Ups", pages: [] },
 ];

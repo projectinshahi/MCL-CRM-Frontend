@@ -7,9 +7,10 @@ import { Field, IconButton, LoadFailed, Modal, ModalActions, PrimaryButton, Text
 import { SectionHeader, UnderlineTabs } from "@/components/users/SectionHeader";
 import { api, fieldErrors, useApi } from "@/lib/api";
 
-const TABS = [
+export const TABS = [
   { label: "Lead Sources", href: "/settings", cls: "px-4" },
   { label: "Lead Status", href: "/settings/lead-status", cls: "px-4" },
+  { label: "Courier Rate Management", href: "/settings/courier-rates", cls: "px-4" },
 ];
 
 type Item = { id: string; name: string; active?: boolean };
